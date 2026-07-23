@@ -1,0 +1,26 @@
+[package]
+name = "towercrane-springboot-architecture-tauri"
+version = "0.1.0"
+description = "Spring Boot 아키텍처 논의 전용 앱"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "towercrane_springboot_architecture_tauri_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-http = "2"
+tauri-plugin-process = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 업데이터는 데스크톱 전용
+[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+tauri-plugin-updater = "2"

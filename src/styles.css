@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@import "pretendard/dist/web/variable/pretendardvariable.css";
+
+/* ──────────────────────────────────────────────────────────────
+   Semantic 테마 토큰 — front(index.css)와 동일하게 미러링.
+   Lexical 에디터/툴바 및 semantic 유틸(text-text-*, bg-surface-*, ui-* 등)이 참조.
+   ⚠ 앱 셸 전역 배경/색을 건드리지 않으려고 front의 @layer base(body override)와
+     docs에 불필요한 @layer components(chat-markdown)는 의도적으로 제외했다.
+   ⚠ tauri는 data-theme를 세팅하지 않으므로 기본 --primary를 emerald(기존 브랜드색)로 둔다.
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand-primary: var(--primary);
+  --color-brand-glass: color-mix(in srgb, var(--primary) 10%, transparent);
+  --color-brand-border: color-mix(in srgb, var(--primary) 30%, transparent);
+
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-muted: oklch(0.6 0 0);
+  --color-text-on-brand: var(--primary-foreground);
+
+  --color-surface-muted: var(--muted);
+  --color-surface-raised: var(--card);
+  --color-surface-strong: var(--background);
+  --color-surface-border: var(--border);
+  --color-surface-border-soft: color-mix(in srgb, var(--border) 65%, transparent);
+
+  --color-status-online: var(--status-online);
+  --color-danger-glass: color-mix(in srgb, oklch(0.6 0.15 25) 10%, transparent);
+}
+
+:root {
+  --radius: 0.25rem;
+
+  --background: oklch(0.985 0.002 240);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+
+  /* 기본 브랜드 = emerald (tauri는 data-theme 미사용) */
+  --primary: oklch(0.52 0.16 160);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.985 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.985 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.985 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.6 0.15 25);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.15 0 0);
+  --input: oklch(0.15 0 0);
+  --ring: oklch(0.4 0 0);
+  --status-online: oklch(0.68 0.18 145);
+}
+
+@layer utilities {
+  .ui-panel {
+    @apply rounded-md border border-surface-border bg-surface-raised shadow-[0_1px_3px_rgba(0,0,0,0.05)];
+  }
+
+  .ui-panel-soft {
+    @apply rounded-md border border-surface-border-soft bg-surface-raised;
+  }
+
+  .ui-input {
+    @apply w-full h-9 rounded-md border border-surface-border bg-background px-3 text-[13px] transition-all focus:border-brand-border focus:ring-2 focus:ring-brand-border/5 outline-none disabled:opacity-60;
+  }
+
+  .ui-icon-button {
+    @apply flex items-center justify-center rounded-md border border-border bg-background text-foreground transition-all hover:bg-muted hover:scale-[1.02] active:scale-[0.98] shadow-sm;
+  }
+
+  .ui-icon-button-brand {
+    @apply flex items-center justify-center rounded-md border border-primary bg-primary text-primary-foreground transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-primary/5;
+  }
+
+  .ui-icon-button-danger {
+    @apply flex items-center justify-center rounded-md border border-destructive bg-destructive text-destructive-foreground transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-destructive/5;
+  }
+
+  .ui-overlay {
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(0px);
+  }
+
+  .glass-panel {
+    background-color: color-mix(in srgb, var(--card) 99%, transparent);
+    backdrop-filter: blur(4px);
+    @apply border border-surface-border-soft shadow-2xl;
+  }
+
+  .editor-list-item-checked,
+  .editor-list-item-unchecked {
+    @apply relative list-none pl-6 text-text-primary;
+  }
+
+  .editor-list-item-checked::before,
+  .editor-list-item-unchecked::before {
+    content: "";
+    @apply absolute left-0 top-[0.25em] size-4 rounded border border-surface-border bg-surface-raised;
+  }
+
+  .editor-list-item-checked {
+    @apply text-text-muted line-through;
+  }
+
+  .editor-list-item-checked::before {
+    @apply border-brand-border bg-brand-glass;
+  }
+
+  .editor-list-item-checked::after {
+    content: "";
+    @apply absolute left-[5px] top-[0.42em] h-2 w-1.5 rotate-45 border-b-2 border-r-2 border-brand-primary;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Pretendard Variable", Pretendard, Inter, Avenir, Helvetica, Arial, sans-serif;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.18s ease-out;
+}

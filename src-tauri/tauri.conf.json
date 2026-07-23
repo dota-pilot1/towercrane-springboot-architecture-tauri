@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicgirault/tauri-v2-schema/main/schema.json",
+  "productName": "Towercrane Springboot Arch",
+  "version": "0.1.0",
+  "identifier": "com.towercrane-springboot-arch.tauri",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1425",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "nsis"],
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlGQjgyNjNGMEFFNzMxRkQKUldUOU1lY0tQeWE0bis2ZlVpK1RtQjg2WHIvWTRVam8vNVhMUXliWVp2QkFnZFJIQ1BRMHZrQzEK",
+      "endpoints": [
+        "https://github.com/dota-pilot1/towercrane-springboot-architecture-tauri/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Towercrane Springboot Arch",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1000,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": -100,
+          "y": 0
+        },
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  }
+}

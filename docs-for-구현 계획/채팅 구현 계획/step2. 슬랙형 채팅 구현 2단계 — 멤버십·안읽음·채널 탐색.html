@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>step2 — 슬랙형 채팅 2단계: 멤버십·안읽음·채널 탐색</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; max-width: 900px; margin: 48px auto; padding: 0 24px; background: #f8fafc; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 1.5rem; color: #047857; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; color: #047857; margin-top: 36px; border-left: 3px solid #10b981; padding-left: 12px; }
+    h3 { font-size: 0.98rem; color: #0f766e; margin-top: 24px; }
+    .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 28px; }
+    .box { background: #ffffff; border: 1px solid #dbe3ee; border-radius: 8px; padding: 14px 20px; margin: 14px 0; font-size: 0.92rem; }
+    .decision { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px 20px; margin: 14px 0; font-size: 0.94rem; }
+    .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px 20px; margin: 14px 0; font-size: 0.92rem; }
+    .label { color: #047857; font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.86rem; }
+    pre { background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 8px; padding: 16px 20px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88rem; }
+    th { background: #ecfdf5; color: #047857; padding: 8px 14px; text-align: left; border: 1px solid #dbe3ee; }
+    td { padding: 8px 14px; border: 1px solid #dbe3ee; color: #334155; vertical-align: top; }
+    a { color: #047857; font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { padding-left: 22px; }
+    li { margin-bottom: 5px; }
+    hr { border: none; border-top: 1px solid #dbe3ee; margin: 32px 0; }
+    .tag { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 1px 10px; font-size: 0.75rem; font-weight: 600; }
+    .done { color: #16a34a; font-weight: 700; }
+    .todo { color: #ea580c; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<h1>step2 — 슬랙형 채팅 구현 2단계 (멤버십·안읽음·채널 탐색)</h1>
+<p class="sub">1단계의 "모두가 모든 채널을 본다"를 넘어, <strong>채널 가입/탈퇴·공개/비공개·안읽음 카운트·채널 탐색</strong>을 붙여 실제로 쓸 만한 사내 채팅으로 만든다.</p>
+
+<hr>
+
+<h2>전제</h2>
+<div class="box">
+  <a href="./step1. 슬랙형 채팅 구현을 위한 1단계 기본 계획.html">step1</a> 완료 = 채널 생성·진입·메시지 송수신·실시간 수신이 동작하는 상태.
+  2단계는 여기에 "누가 어떤 채널에 속하는가 + 안 읽은 게 몇 개인가"를 추가한다.
+</div>
+
+<h2>결론 — 이번 단계의 핵심은 새 테이블 2개</h2>
+<div class="decision">
+  <div class="label">핵심 판단</div>
+  현재 멤버십은 <strong>워크스페이스 단위</strong>(<code>meeting_workspace_members</code>)뿐이라, 채널 단위 가입과 비공개 채널을 표현할 수 없다.<br>
+  → <strong>채널 멤버십</strong>과 <strong>읽음 상태</strong> 테이블을 새로 만든다. 안읽음은 "마지막 읽은 메시지 이후 개수"로 계산.
+</div>
+
+<hr>
+
+<h2>2단계 범위 (Scope)</h2>
+<div class="box">
+  <ul>
+    <li>채널 <strong>가입 / 나가기</strong> (공개 채널은 누구나 가입, 비공개는 초대 필요)</li>
+    <li>채널 <strong>공개(public) / 비공개(private)</strong> 구분</li>
+    <li><strong>안읽음 카운트</strong>: 채널별 미읽음 배지 + 레일 <code>채팅</code> 아이콘 합계 배지</li>
+    <li><strong>채널 탐색</strong>: 가입 안 한 공개 채널 목록 + 검색해서 가입</li>
+    <li>사이드바: <strong>내 채널</strong>(가입한 것)만 기본 표시, 안읽음 우선 정렬</li>
+    <li>멤버 초대 (비공개 채널에 조직 구성원 추가)</li>
+  </ul>
+</div>
+<div class="warn"><strong>비범위:</strong> @멘션·검색·스레드·반응·파일 (3단계 이후).</div>
+
+<hr>
+
+<h2>백엔드 작업</h2>
+
+<h3>DB — 신규 테이블 <span class="tag">server src/database/schema.ts</span></h3>
+<pre><code>// 채널(룸) 단위 멤버십
+meeting_room_members
+  id            text  pk
+  room_id       text  fk → meeting_rooms.id (cascade)
+  user_id       text  fk → users.id (cascade)
+  role          text  'owner' | 'member'         // 채널 관리 권한
+  created_at    text
+  (unique: room_id + user_id)
+
+// 채널별 읽음 상태 (안읽음 계산용)
+meeting_room_reads
+  id                  text  pk
+  room_id             text  fk → meeting_rooms.id (cascade)
+  user_id             text  fk → users.id (cascade)
+  last_read_at        text                         // 마지막으로 읽은 시각
+  last_read_message_id text nullable
+  updated_at          text
+  (unique: room_id + user_id)</code></pre>
+<div class="box">
+  <strong>채널 공개/비공개:</strong> <code>meeting_rooms</code>에 <code>visibility</code>(<code>'public' | 'private'</code>) 컬럼 추가. 기존 채널은 <code>public</code> 기본값으로 마이그레이션.
+</div>
+
+<h3>API — 신규/확장 <span class="tag">server src/meeting/meeting.controller.ts</span></h3>
+<table>
+  <thead><tr><th>메서드 · 경로</th><th>설명</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /meeting/rooms/:roomId/join</code></td><td>공개 채널 가입 (멤버십 row 생성)</td></tr>
+    <tr><td><code>POST /meeting/rooms/:roomId/leave</code></td><td>채널 나가기 — 기존 leave를 그룹 채널로 확장 (DM은 양쪽 삭제, 채널은 멤버십만 제거)</td></tr>
+    <tr><td><code>POST /meeting/rooms/:roomId/members</code></td><td>멤버 초대 (비공개 채널, owner 권한)</td></tr>
+    <tr><td><code>GET /meeting/rooms/explore</code></td><td>가입 안 한 공개 채널 목록 (탐색)</td></tr>
+    <tr><td><code>POST /meeting/rooms/:roomId/read</code></td><td>읽음 처리 (<code>last_read_at</code> 갱신)</td></tr>
+    <tr><td><code>GET /meeting/rooms</code> (확장)</td><td>각 채널에 <code>unreadCount</code> 포함 — <code>created_at &gt; last_read_at</code> 메시지 수 집계</td></tr>
+  </tbody>
+</table>
+
+<h3>실시간 <span class="tag">meeting.gateway.ts</span></h3>
+<div class="box">
+  새 메시지 브로드캐스트 시, 수신 클라이언트가 <strong>현재 보고 있지 않은 채널</strong>이면 안읽음 +1 반영. 멤버 가입/탈퇴 이벤트도 push해 사이드바 동기화.
+</div>
+
+<hr>
+
+<h2>프론트 (Tauri) 작업</h2>
+<table>
+  <thead><tr><th>파일</th><th>작업</th></tr></thead>
+  <tbody>
+    <tr><td><code>src/features/chat/api.ts</code></td><td><code>joinChannel</code>, <code>leaveChannel</code>, <code>inviteMember</code>, <code>exploreChannels</code>, <code>markRead</code> 추가. 채널 타입에 <code>unreadCount</code>·<code>visibility</code> 필드</td></tr>
+    <tr><td><code>src/features/chat/ChannelList.tsx</code></td><td>채널별 <strong>안읽음 배지</strong>, 안읽음 우선 정렬, 비공개 채널 자물쇠 아이콘, 하단 "채널 탐색" 진입</td></tr>
+    <tr><td><code>src/features/chat/ChannelExplorer.tsx</code> <em>(신규)</em></td><td>공개 채널 탐색·검색·가입 모달/패널</td></tr>
+    <tr><td><code>src/features/chat/ChannelMembers.tsx</code> <em>(신규)</em></td><td>채널 멤버 목록 + 초대 (조직도 재사용)</td></tr>
+    <tr><td><code>src/features/chat/ChatView.tsx</code></td><td>채널 열람 시 <code>markRead</code> 호출, 새 메시지 도착 시 자동 읽음 처리(포커스 상태)</td></tr>
+    <tr><td><code>src/features/chat/useMeetingSocket.ts</code> <strong>(중요 리팩터)</strong></td><td>현재는 <strong>활성 방 1개만</strong> 구독하고 <code>roomId === activeRoom</code>이 아니면 메시지를 버린다. 안읽음 배지를 위해 <strong>내가 속한 모든 채널을 구독</strong>하고, 들어온 메시지를 <code>roomId</code>로 라우팅해 비활성 방이면 <code>unread++</code> 하는 멀티룸 구조로 바꿔야 한다. (step1의 단일 active-room 모델로는 안읽음이 불가능)</td></tr>
+    <tr><td><code>src/widgets/app-shell/AppShell.tsx</code></td><td>레일 <code>채팅</code> 아이콘에 안읽음 <strong>합계 배지</strong></td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>안읽음 계산 규칙 (정확성 포인트)</h2>
+<div class="warn">
+  <ul>
+    <li>본인이 보낸 메시지는 안읽음에 포함하지 않는다.</li>
+    <li>채널을 <strong>열고 있는 동안</strong> 도착한 메시지는 즉시 읽음 처리(배지 안 올림).</li>
+    <li><code>last_read_at</code>은 "스크롤이 맨 아래일 때"만 최신으로 갱신 — 위로 올려 과거 읽는 중엔 유지.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>완료 기준 (Definition of Done)</h2>
+<div class="decision">
+  <ul>
+    <li>공개 채널을 탐색→가입할 수 있고, 가입한 채널만 내 사이드바에 뜬다.</li>
+    <li>비공개 채널은 초대받은 사람만 보이고 들어갈 수 있다.</li>
+    <li>다른 사람이 메시지를 보내면 해당 채널에 안읽음 배지가 뜨고, 레일 아이콘에 합계가 뜬다.</li>
+    <li>채널을 열면 배지가 사라진다(읽음 처리).</li>
+    <li>채널 나가기 시 내 사이드바에서 사라지고, DM 나가기 동작과 충돌하지 않는다.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>이웃 문서</h2>
+<table>
+  <tbody>
+    <tr><td><a href="./step1. 슬랙형 채팅 구현을 위한 1단계 기본 계획.html">← step1 — 기본</a></td><td>채널 생성·메시징·실시간</td></tr>
+    <tr><td><a href="./step3. 슬랙형 채팅 구현 3단계 — 멘션·알림·검색.html">step3 — 멘션·알림·검색 →</a></td><td>@멘션, 알림, 검색</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

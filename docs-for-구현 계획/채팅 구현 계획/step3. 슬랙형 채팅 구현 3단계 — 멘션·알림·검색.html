@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>step3 — 슬랙형 채팅 3단계: 멘션·알림·검색</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; max-width: 900px; margin: 48px auto; padding: 0 24px; background: #f8fafc; color: #1e293b; line-height: 1.7; }
+    h1 { font-size: 1.5rem; color: #047857; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; color: #047857; margin-top: 36px; border-left: 3px solid #10b981; padding-left: 12px; }
+    h3 { font-size: 0.98rem; color: #0f766e; margin-top: 24px; }
+    .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 28px; }
+    .box { background: #ffffff; border: 1px solid #dbe3ee; border-radius: 8px; padding: 14px 20px; margin: 14px 0; font-size: 0.92rem; }
+    .decision { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px 20px; margin: 14px 0; font-size: 0.94rem; }
+    .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px 20px; margin: 14px 0; font-size: 0.92rem; }
+    .label { color: #047857; font-weight: bold; font-size: 0.8rem; margin-bottom: 6px; }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.86rem; }
+    pre { background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 8px; padding: 16px 20px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88rem; }
+    th { background: #ecfdf5; color: #047857; padding: 8px 14px; text-align: left; border: 1px solid #dbe3ee; }
+    td { padding: 8px 14px; border: 1px solid #dbe3ee; color: #334155; vertical-align: top; }
+    a { color: #047857; font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { padding-left: 22px; }
+    li { margin-bottom: 5px; }
+    hr { border: none; border-top: 1px solid #dbe3ee; margin: 32px 0; }
+    .tag { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 1px 10px; font-size: 0.75rem; font-weight: 600; }
+    .done { color: #16a34a; font-weight: 700; }
+    .todo { color: #ea580c; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<h1>step3 — 슬랙형 채팅 구현 3단계 (멘션·알림·검색)</h1>
+<p class="sub">대화량이 늘면 "나를 부른 메시지"와 "예전에 본 그 메시지"를 빠르게 찾는 게 핵심이 된다. <strong>@멘션 · 멘션 알림 · 메시지 검색</strong>을 붙인다.</p>
+
+<hr>
+
+<h2>전제</h2>
+<div class="box">
+  <a href="./step2. 슬랙형 채팅 구현 2단계 — 멤버십·안읽음·채널 탐색.html">step2</a> 완료 = 채널 멤버십·안읽음·탐색이 동작.
+  3단계는 메시지 본문을 "구조적으로" 다루기 시작한다(멘션 파싱·인덱싱).
+</div>
+
+<h2>결론 — 멘션은 별도 테이블, 검색은 단계적</h2>
+<div class="decision">
+  <div class="label">핵심 판단</div>
+  <strong>멘션</strong>은 메시지에서 <code>@사용자</code>를 파싱해 별도 테이블로 적재 → "내 멘션함"과 알림 배지를 빠르게 조회.<br>
+  <strong>검색</strong>은 먼저 SQLite <code>LIKE</code> 기반 단순 검색으로 출시하고, 데이터가 커지면 FTS5 전문검색으로 승격(2-pass).
+</div>
+
+<hr>
+
+<h2>3단계 범위 (Scope)</h2>
+<div class="box">
+  <ul>
+    <li>메시지 입력 중 <code>@</code> 타이핑 → 멤버 자동완성, 멘션 토큰 저장</li>
+    <li>멘션 받은 사람: 안읽음과 별개로 <strong>멘션 배지</strong>(빨강) + "내 멘션" 모아보기</li>
+    <li><code>@everyone</code>(채널 전체) / <code>@here</code>(접속 중) 특수 멘션</li>
+    <li><strong>메시지 검색</strong>: 채널 내 검색 + 전체 검색, 결과 클릭 시 해당 메시지로 점프</li>
+    <li>(선택) OS 데스크톱 알림 — Tauri notification 플러그인</li>
+  </ul>
+</div>
+<div class="warn"><strong>비범위:</strong> 스레드·반응(4단계), 파일 첨부(5단계).</div>
+
+<hr>
+
+<h2>백엔드 작업</h2>
+
+<h3>DB — 신규 테이블 <span class="tag">server src/database/schema.ts</span></h3>
+<pre><code>// 멘션 적재 (메시지 저장 시 파싱해서 함께 insert)
+meeting_mentions
+  id          text  pk
+  message_id  text  fk → meeting_messages.id (cascade)
+  room_id     text  fk → meeting_rooms.id (cascade)
+  mentioned_user_id text fk → users.id (cascade)   // @everyone/@here는 별도 처리
+  mention_type text  'user' | 'everyone' | 'here'
+  is_read     integer(bool) default false
+  created_at  text
+  (index: mentioned_user_id + is_read)</code></pre>
+<div class="box">
+  <strong>검색 인덱스(2-pass):</strong>
+  <ul>
+    <li><strong>1차</strong>: <code>meeting_messages.content</code>에 <code>LIKE '%keyword%'</code> + <code>room_id</code> 필터. 인덱스 추가로 충분.</li>
+    <li><strong>2차(데이터 증가 후)</strong>: SQLite <code>FTS5</code> 가상 테이블 <code>meeting_messages_fts</code> 생성, 트리거로 동기화.</li>
+  </ul>
+</div>
+
+<h3>API <span class="tag">server src/meeting/meeting.controller.ts</span></h3>
+<table>
+  <thead><tr><th>메서드 · 경로</th><th>설명</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /meeting/rooms/:roomId/messages</code> (확장)</td><td>전송 시 본문에서 <code>@</code> 멘션 파싱 → <code>meeting_mentions</code> 적재 + payload에 멘션 메타 포함</td></tr>
+    <tr><td><code>GET /meeting/mentions</code></td><td>내 멘션 목록(미읽음 우선) — 멘션함</td></tr>
+    <tr><td><code>POST /meeting/mentions/:id/read</code></td><td>멘션 읽음 처리</td></tr>
+    <tr><td><code>GET /meeting/search?q=&amp;roomId=</code></td><td>메시지 검색 (roomId 없으면 내가 속한 채널 전체)</td></tr>
+    <tr><td><code>GET /meeting/rooms/:roomId/members</code> (재사용)</td><td>@ 자동완성 후보</td></tr>
+  </tbody>
+</table>
+
+<h3>실시간 <span class="tag">meeting.gateway.ts</span></h3>
+<div class="box">
+  멘션 포함 메시지 브로드캐스트 시, 멘션 대상에게 <strong>전용 이벤트</strong>(예: <code>mention</code>)도 push → 멘션 배지·OS 알림 즉시 반영.
+</div>
+
+<hr>
+
+<h2>프론트 (Tauri) 작업</h2>
+<table>
+  <thead><tr><th>파일</th><th>작업</th></tr></thead>
+  <tbody>
+    <tr><td><code>src/features/chat/MessageInput.tsx</code> <em>(신규/분리)</em></td><td><code>@</code> 입력 감지 → 멤버 자동완성 팝업, 멘션 토큰 하이라이트</td></tr>
+    <tr><td><code>src/features/chat/MessageItem.tsx</code></td><td>본문 내 멘션 렌더(파란 칩), 본인 멘션은 강조 배경</td></tr>
+    <tr><td><code>src/features/chat/api.ts</code></td><td><code>getMentions</code>, <code>markMentionRead</code>, <code>searchMessages</code> 추가</td></tr>
+    <tr><td><code>src/features/chat/MentionInbox.tsx</code> <em>(신규)</em></td><td>"내 멘션" 패널 — 클릭 시 해당 메시지로 점프</td></tr>
+    <tr><td><code>src/features/chat/SearchPanel.tsx</code> <em>(신규)</em></td><td>검색 입력 + 결과 리스트 + 메시지 점프(스크롤 앵커)</td></tr>
+    <tr><td><code>src/widgets/app-shell/AppShell.tsx</code></td><td>레일/헤더에 멘션 배지(안읽음 배지와 구분되는 색)</td></tr>
+    <tr><td><code>src-tauri</code> (선택)</td><td>OS 데스크톱 알림 플러그인 연동</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>정확성 포인트</h2>
+<div class="warn">
+  <ul>
+    <li>멘션 파싱은 <strong>서버에서</strong> 최종 확정(클라 파싱만 믿지 않음) — 위조·없는 사용자 방지.</li>
+    <li><code>@everyone</code>은 권한 가드(아무나 전체 알림 못 쏘게 owner/관리자 제한 고려).</li>
+    <li>검색은 내가 <strong>접근 권한 있는 채널</strong>로만 한정(비공개 채널 누수 금지).</li>
+    <li>메시지 점프: 검색/멘션에서 이동 시 해당 메시지가 로드 안 됐으면 "그 시점 페이지"부터 로드.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>완료 기준 (Definition of Done)</h2>
+<div class="decision">
+  <ul>
+    <li>입력창에서 <code>@</code> 치면 멤버 자동완성이 뜨고, 보낸 메시지에 멘션 칩이 보인다.</li>
+    <li>멘션 받으면 멘션 배지가 뜨고, "내 멘션"에서 모아 볼 수 있다.</li>
+    <li>키워드 검색으로 과거 메시지를 찾고, 클릭하면 그 메시지로 점프한다.</li>
+    <li>비공개 채널 메시지가 권한 없는 사람 검색결과에 절대 안 나온다.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>이웃 문서</h2>
+<table>
+  <tbody>
+    <tr><td><a href="./step2. 슬랙형 채팅 구현 2단계 — 멤버십·안읽음·채널 탐색.html">← step2 — 멤버십·안읽음·탐색</a></td><td>가입/안읽음/탐색</td></tr>
+    <tr><td><a href="./step1. 슬랙형 채팅 구현을 위한 1단계 기본 계획.html">step1 — 기본</a></td><td>채널 생성·메시징·실시간</td></tr>
+  </tbody>
+</table>
+<p class="sub">4단계(스레드·반응), 5단계(파일·운영)는 3단계 안정화 후 별도 문서로 작성.</p>
+
+</body>
+</html>
