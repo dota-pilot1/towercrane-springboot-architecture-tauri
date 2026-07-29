@@ -1,6 +1,6 @@
 import { apiRequest } from "../../shared/api/client";
 
-export type PlanningDesignWorkspace = {
+export type DevHistoryWorkspace = {
   id: string;
   title: string;
   description: string | null;
@@ -8,21 +8,21 @@ export type PlanningDesignWorkspace = {
   orderIdx: number;
 };
 
-export type PlanningDesignCategory = {
+export type DevHistoryCategory = {
   id: string;
   workspaceId: string;
   name: string;
   orderIdx: number;
 };
 
-export type PlanningDesignSection = {
+export type DevHistorySection = {
   id: string;
   categoryId: string;
   title: string;
   orderIdx: number;
 };
 
-export type PlanningDesignDocument = {
+export type DevHistoryDocument = {
   id: string;
   sectionId: string;
   title: string;
@@ -38,18 +38,18 @@ export type WorkspaceSummary = {
 
 export function listWorkspaces(
   token: string,
-): Promise<PlanningDesignWorkspace[]> {
-  return apiRequest<PlanningDesignWorkspace[]>("/planning-design/workspaces", {
+): Promise<DevHistoryWorkspace[]> {
+  return apiRequest<DevHistoryWorkspace[]>("/dev-history/workspaces", {
     token,
-    errorMessage: "기획·설계 워크스페이스를 불러오지 못했습니다.",
+    errorMessage: "개발 일지 워크스페이스를 불러오지 못했습니다.",
   });
 }
 
 export function createWorkspace(
   token: string,
   body: { title: string; description?: string | null; icon?: string },
-): Promise<PlanningDesignWorkspace> {
-  return apiRequest<PlanningDesignWorkspace>("/planning-design/workspaces", {
+): Promise<DevHistoryWorkspace> {
+  return apiRequest<DevHistoryWorkspace>("/dev-history/workspaces", {
     method: "POST",
     body,
     token,
@@ -61,9 +61,9 @@ export function updateWorkspace(
   token: string,
   id: string,
   body: { title?: string; description?: string | null; icon?: string },
-): Promise<PlanningDesignWorkspace> {
-  return apiRequest<PlanningDesignWorkspace>(
-    `/planning-design/workspaces/${id}`,
+): Promise<DevHistoryWorkspace> {
+  return apiRequest<DevHistoryWorkspace>(
+    `/dev-history/workspaces/${id}`,
     {
       method: "PATCH",
       body,
@@ -74,7 +74,7 @@ export function updateWorkspace(
 }
 
 export function deleteWorkspace(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/workspaces/${id}`, {
+  return apiRequest<void>(`/dev-history/workspaces/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "워크스페이스를 삭제하지 못했습니다.",
@@ -86,7 +86,7 @@ export function getWorkspaceSummary(
   id: string,
 ): Promise<WorkspaceSummary> {
   return apiRequest<WorkspaceSummary>(
-    `/planning-design/workspaces/${id}/summary`,
+    `/dev-history/workspaces/${id}/summary`,
     {
       token,
       errorMessage: "워크스페이스 현황을 불러오지 못했습니다.",
@@ -98,7 +98,7 @@ export function reorderWorkspaces(
   token: string,
   workspaceIds: string[],
 ): Promise<void> {
-  return apiRequest<void>("/planning-design/workspaces/reorder", {
+  return apiRequest<void>("/dev-history/workspaces/reorder", {
     method: "POST",
     body: { workspaceIds },
     token,
@@ -109,9 +109,9 @@ export function reorderWorkspaces(
 export function getCategories(
   token: string,
   workspaceId: string,
-): Promise<PlanningDesignCategory[]> {
-  return apiRequest<PlanningDesignCategory[]>(
-    `/planning-design/workspaces/${workspaceId}/categories`,
+): Promise<DevHistoryCategory[]> {
+  return apiRequest<DevHistoryCategory[]>(
+    `/dev-history/workspaces/${workspaceId}/categories`,
     { token, errorMessage: "1차 주제를 불러오지 못했습니다." },
   );
 }
@@ -120,9 +120,9 @@ export function createCategory(
   token: string,
   workspaceId: string,
   body: { name: string },
-): Promise<PlanningDesignCategory> {
-  return apiRequest<PlanningDesignCategory>(
-    `/planning-design/workspaces/${workspaceId}/categories`,
+): Promise<DevHistoryCategory> {
+  return apiRequest<DevHistoryCategory>(
+    `/dev-history/workspaces/${workspaceId}/categories`,
     { method: "POST", body, token, errorMessage: "1차 주제를 만들지 못했습니다." },
   );
 }
@@ -131,9 +131,9 @@ export function updateCategory(
   token: string,
   id: string,
   body: { name: string },
-): Promise<PlanningDesignCategory> {
-  return apiRequest<PlanningDesignCategory>(
-    `/planning-design/categories/${id}`,
+): Promise<DevHistoryCategory> {
+  return apiRequest<DevHistoryCategory>(
+    `/dev-history/categories/${id}`,
     {
       method: "PATCH",
       body,
@@ -144,7 +144,7 @@ export function updateCategory(
 }
 
 export function deleteCategory(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/categories/${id}`, {
+  return apiRequest<void>(`/dev-history/categories/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "1차 주제를 삭제하지 못했습니다.",
@@ -157,7 +157,7 @@ export function reorderCategories(
   categoryIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/workspaces/${workspaceId}/categories/reorder`,
+    `/dev-history/workspaces/${workspaceId}/categories/reorder`,
     {
       method: "POST",
       body: { categoryIds },
@@ -170,9 +170,9 @@ export function reorderCategories(
 export function getSections(
   token: string,
   categoryId: string,
-): Promise<PlanningDesignSection[]> {
-  return apiRequest<PlanningDesignSection[]>(
-    `/planning-design/categories/${categoryId}/sections`,
+): Promise<DevHistorySection[]> {
+  return apiRequest<DevHistorySection[]>(
+    `/dev-history/categories/${categoryId}/sections`,
     { token, errorMessage: "2차 주제를 불러오지 못했습니다." },
   );
 }
@@ -180,8 +180,8 @@ export function getSections(
 export function createSection(
   token: string,
   body: { categoryId: string; title: string },
-): Promise<PlanningDesignSection> {
-  return apiRequest<PlanningDesignSection>("/planning-design/sections", {
+): Promise<DevHistorySection> {
+  return apiRequest<DevHistorySection>("/dev-history/sections", {
     method: "POST",
     body,
     token,
@@ -193,8 +193,8 @@ export function updateSection(
   token: string,
   id: string,
   body: { title: string },
-): Promise<PlanningDesignSection> {
-  return apiRequest<PlanningDesignSection>(`/planning-design/sections/${id}`, {
+): Promise<DevHistorySection> {
+  return apiRequest<DevHistorySection>(`/dev-history/sections/${id}`, {
     method: "PATCH",
     body,
     token,
@@ -203,7 +203,7 @@ export function updateSection(
 }
 
 export function deleteSection(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/sections/${id}`, {
+  return apiRequest<void>(`/dev-history/sections/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "2차 주제를 삭제하지 못했습니다.",
@@ -216,7 +216,7 @@ export function reorderSections(
   sectionIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/categories/${categoryId}/sections/reorder`,
+    `/dev-history/categories/${categoryId}/sections/reorder`,
     {
       method: "POST",
       body: { sectionIds },
@@ -230,22 +230,22 @@ export function reorderSections(
 export function getNotes(
   token: string,
   sectionId: string,
-): Promise<PlanningDesignDocument[]> {
-  return apiRequest<PlanningDesignDocument[]>(
-    `/planning-design/sections/${sectionId}/documents`,
-    { token, errorMessage: "기획·설계 문서를 불러오지 못했습니다." },
+): Promise<DevHistoryDocument[]> {
+  return apiRequest<DevHistoryDocument[]>(
+    `/dev-history/sections/${sectionId}/documents`,
+    { token, errorMessage: "개발 일지를 불러오지 못했습니다." },
   );
 }
 
 export function createNote(
   token: string,
   body: { sectionId: string; title: string; content: string },
-): Promise<PlanningDesignDocument> {
-  return apiRequest<PlanningDesignDocument>("/planning-design/documents", {
+): Promise<DevHistoryDocument> {
+  return apiRequest<DevHistoryDocument>("/dev-history/documents", {
     method: "POST",
     body,
     token,
-    errorMessage: "기획·설계 문서를 만들지 못했습니다.",
+    errorMessage: "개발 일지를 만들지 못했습니다.",
   });
 }
 
@@ -253,20 +253,20 @@ export function updateNote(
   token: string,
   id: string,
   body: { title?: string; content?: string },
-): Promise<PlanningDesignDocument> {
-  return apiRequest<PlanningDesignDocument>(`/planning-design/documents/${id}`, {
+): Promise<DevHistoryDocument> {
+  return apiRequest<DevHistoryDocument>(`/dev-history/documents/${id}`, {
     method: "PATCH",
     body,
     token,
-    errorMessage: "기획·설계 문서를 저장하지 못했습니다.",
+    errorMessage: "개발 일지를 저장하지 못했습니다.",
   });
 }
 
 export function deleteNote(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/documents/${id}`, {
+  return apiRequest<void>(`/dev-history/documents/${id}`, {
     method: "DELETE",
     token,
-    errorMessage: "기획·설계 문서를 삭제하지 못했습니다.",
+    errorMessage: "개발 일지를 삭제하지 못했습니다.",
   });
 }
 
@@ -276,12 +276,12 @@ export function reorderNotes(
   noteIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/sections/${sectionId}/documents/reorder`,
+    `/dev-history/sections/${sectionId}/documents/reorder`,
     {
       method: "POST",
       body: { documentIds: noteIds },
       token,
-      errorMessage: "문서 순서를 변경하지 못했습니다.",
+      errorMessage: "일지 순서를 변경하지 못했습니다.",
     },
   );
 }

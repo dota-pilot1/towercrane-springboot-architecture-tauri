@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  DraftingCompass,
-  FileText,
-  GitPullRequest,
-  Layers,
   LogOut,
-  MessageCircle,
   Package,
   Settings,
   UserCircle,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { User } from "../../entities/user";
@@ -21,15 +15,21 @@ import DocsModule from "../docs/DocsModule";
 import StudyDiaryModule from "../study-diary/StudyDiaryModule";
 import ArchNoteModule from "../arch-note/ArchNoteModule";
 import PlanningDesignModule from "../planning-design/PlanningDesignModule";
-import GithubPrReviewModule from "../github-pr-review/GithubPrReviewModule";
+import DevHistoryModule from "../dev-history/DevHistoryModule";
+import IdeaNoteModule from "../idea-note/IdeaNoteModule";
 import ProjectCodeReviewModule from "../project-code-review/ProjectCodeReviewModule";
 import HomePage from "../home/HomePage";
 import ProfilePage from "../profile/ProfilePage";
 import SettingsPage from "../settings/SettingsPage";
 import PageHeader from "../../shared/ui/PageHeader";
+import WindowControls from "../../shared/ui/WindowControls";
 import { useAppSettingsStore } from "../../shared/lib/app-settings-store";
 import { getRailTheme } from "../../shared/lib/rail-themes";
 import { useAppUpdate } from "../../shared/lib/useAppUpdate";
+import {
+  APP_MODULES,
+  type AppModuleId,
+} from "../../shared/config/app-modules";
 
 type Props = {
   user: User;
@@ -37,45 +37,26 @@ type Props = {
   onLogout: () => void;
 };
 
-type ModuleId =
-  | "messenger"
-  | "chat"
-  | "docs"
-  | "studydiary"
-  | "archnote"
-  | "planningdesign"
-  | "githubprreview"
-  | "codereview";
-type ViewId = "home" | "profile" | "settings" | ModuleId;
-
-type ModuleDef = {
-  id: ModuleId;
-  label: string;
-  icon: LucideIcon;
-  ready: boolean;
-};
-
-const MODULES: ModuleDef[] = [
-  { id: "messenger", label: "메신저", icon: MessageCircle, ready: true },
-  { id: "chat", label: "채팅", icon: Users, ready: true },
-  { id: "docs", label: "문서 관리", icon: FileText, ready: true },
-  { id: "studydiary", label: "스터디 노트", icon: FileText, ready: true },
-  { id: "archnote", label: "아키텍처", icon: Layers, ready: true },
-  {
-    id: "planningdesign",
-    label: "기획·설계",
-    icon: DraftingCompass,
-    ready: true,
-  },
-  { id: "githubprreview", label: "PR 리뷰", icon: GitPullRequest, ready: true },
-  { id: "codereview", label: "코드리뷰", icon: GitPullRequest, ready: true },
-];
+type ViewId = "home" | "profile" | "settings" | AppModuleId;
 
 function AppShell({ user, onUserUpdate, onLogout }: Props) {
   const [active, setActive] = useState<ViewId>("home");
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
-  const activeModule = MODULES.find((m) => m.id === active);
+  const moduleOrder = useAppSettingsStore((s) => s.moduleOrder);
+  const hiddenModuleIds = useAppSettingsStore((s) => s.hiddenModuleIds);
+  const orderedModules = [...APP_MODULES].sort((a, b) => {
+    const aIndex = moduleOrder.indexOf(a.id);
+    const bIndex = moduleOrder.indexOf(b.id);
+    return (
+      (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) -
+      (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex)
+    );
+  });
+  const visibleModules = orderedModules.filter(
+    (module) => !hiddenModuleIds.includes(module.id),
+  );
+  const activeModule = APP_MODULES.find((m) => m.id === active);
   const railTheme = getRailTheme(useAppSettingsStore((s) => s.railTheme));
   const displayName = user.name || user.email;
   const roleName = user.role === "admin" ? "관리자" : "사용자";
@@ -141,7 +122,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
 
         {/* 모듈 버튼 */}
         <div className="flex-1 flex flex-col items-center gap-2 pt-2">
-          {MODULES.map((m) => {
+          {visibleModules.map((m) => {
             const isActive = m.id === active;
             // 안읽음 배지 — 메신저=DM, 채팅=채널
             const badge =
@@ -167,7 +148,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
                   }
                 />
                 <m.icon className="size-[21px] shrink-0" strokeWidth={2} />
-                <span className="overflow-hidden max-h-3 opacity-100 text-[10px] font-semibold leading-none">
+                <span className="w-full overflow-hidden px-0.5 text-center text-[10px] font-semibold leading-[1.08] opacity-100 [word-break:keep-all]">
                   {m.label}
                 </span>
                 {/* 안읽음 배지 — 멘션 있으면 강조 링 */}
@@ -307,7 +288,11 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
       {/* 활성 화면 */}
       <div className="flex-1 min-w-0 flex">
         {active === "home" ? (
-          <HomePage user={user} modules={MODULES} onOpen={(id) => setActive(id as ViewId)} />
+          <HomePage
+            user={user}
+            modules={visibleModules}
+            onOpen={(id) => setActive(id as ViewId)}
+          />
         ) : active === "profile" ? (
           <ProfilePage
             user={user}
@@ -329,8 +314,10 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           <ArchNoteModule />
         ) : activeModule?.id === "planningdesign" ? (
           <PlanningDesignModule />
-        ) : activeModule?.id === "githubprreview" ? (
-          <GithubPrReviewModule />
+        ) : activeModule?.id === "devhistory" ? (
+          <DevHistoryModule />
+        ) : activeModule?.id === "ideanote" ? (
+          <IdeaNoteModule />
         ) : activeModule?.id === "codereview" ? (
           <ProjectCodeReviewModule />
         ) : (
@@ -341,6 +328,12 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
         )}
       </div>
 
+      {/* 창 버튼 — 항상 창 우상단, 메인 헤더 위 오버레이 */}
+      <div className="absolute top-0 right-0 h-12 flex items-center pr-2 z-50 pointer-events-none">
+        <div className="pointer-events-auto">
+          <WindowControls />
+        </div>
+      </div>
     </div>
   );
 }

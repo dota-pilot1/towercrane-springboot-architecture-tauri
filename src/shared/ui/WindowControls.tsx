@@ -9,6 +9,8 @@ const windowControlClass =
   "flex size-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors hover:border-surface-border-soft hover:bg-surface-muted hover:text-text-primary";
 
 function WindowControls() {
+  if (!isTauri) return null;
+
   const win = isTauri ? getCurrentWindow() : null;
 
   return (

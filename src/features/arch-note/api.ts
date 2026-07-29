@@ -30,6 +30,12 @@ export type ArchNote = {
   orderIdx: number;
 };
 
+export type WorkspaceSummary = {
+  categoryCount: number;
+  sectionCount: number;
+  itemCount: number;
+};
+
 // ── 워크스페이스 ──────────────────────────────────────────
 export function listWorkspaces(token: string): Promise<ArchWorkspace[]> {
   return apiRequest<ArchWorkspace[]>("/arch-note/workspaces", {
@@ -68,6 +74,28 @@ export function deleteWorkspace(token: string, id: string): Promise<void> {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
+  });
+}
+
+export function getWorkspaceSummary(
+  token: string,
+  id: string,
+): Promise<WorkspaceSummary> {
+  return apiRequest<WorkspaceSummary>(`/arch-note/workspaces/${id}/summary`, {
+    token,
+    errorMessage: "워크스페이스 현황을 불러오지 못했습니다.",
+  });
+}
+
+export function reorderWorkspaces(
+  token: string,
+  workspaceIds: string[],
+): Promise<void> {
+  return apiRequest<void>("/arch-note/workspaces/reorder", {
+    method: "POST",
+    body: { workspaceIds },
+    token,
+    errorMessage: "워크스페이스 순서를 변경하지 못했습니다.",
   });
 }
 

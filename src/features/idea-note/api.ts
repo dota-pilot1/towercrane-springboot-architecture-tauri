@@ -1,6 +1,6 @@
 import { apiRequest } from "../../shared/api/client";
 
-export type PlanningDesignWorkspace = {
+export type IdeaNoteWorkspace = {
   id: string;
   title: string;
   description: string | null;
@@ -8,21 +8,21 @@ export type PlanningDesignWorkspace = {
   orderIdx: number;
 };
 
-export type PlanningDesignCategory = {
+export type IdeaNoteCategory = {
   id: string;
   workspaceId: string;
   name: string;
   orderIdx: number;
 };
 
-export type PlanningDesignSection = {
+export type IdeaNoteSection = {
   id: string;
   categoryId: string;
   title: string;
   orderIdx: number;
 };
 
-export type PlanningDesignDocument = {
+export type IdeaNoteDocument = {
   id: string;
   sectionId: string;
   title: string;
@@ -38,18 +38,18 @@ export type WorkspaceSummary = {
 
 export function listWorkspaces(
   token: string,
-): Promise<PlanningDesignWorkspace[]> {
-  return apiRequest<PlanningDesignWorkspace[]>("/planning-design/workspaces", {
+): Promise<IdeaNoteWorkspace[]> {
+  return apiRequest<IdeaNoteWorkspace[]>("/idea-note/workspaces", {
     token,
-    errorMessage: "기획·설계 워크스페이스를 불러오지 못했습니다.",
+    errorMessage: "아이디어 노트 워크스페이스를 불러오지 못했습니다.",
   });
 }
 
 export function createWorkspace(
   token: string,
   body: { title: string; description?: string | null; icon?: string },
-): Promise<PlanningDesignWorkspace> {
-  return apiRequest<PlanningDesignWorkspace>("/planning-design/workspaces", {
+): Promise<IdeaNoteWorkspace> {
+  return apiRequest<IdeaNoteWorkspace>("/idea-note/workspaces", {
     method: "POST",
     body,
     token,
@@ -61,9 +61,9 @@ export function updateWorkspace(
   token: string,
   id: string,
   body: { title?: string; description?: string | null; icon?: string },
-): Promise<PlanningDesignWorkspace> {
-  return apiRequest<PlanningDesignWorkspace>(
-    `/planning-design/workspaces/${id}`,
+): Promise<IdeaNoteWorkspace> {
+  return apiRequest<IdeaNoteWorkspace>(
+    `/idea-note/workspaces/${id}`,
     {
       method: "PATCH",
       body,
@@ -74,7 +74,7 @@ export function updateWorkspace(
 }
 
 export function deleteWorkspace(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/workspaces/${id}`, {
+  return apiRequest<void>(`/idea-note/workspaces/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "워크스페이스를 삭제하지 못했습니다.",
@@ -86,7 +86,7 @@ export function getWorkspaceSummary(
   id: string,
 ): Promise<WorkspaceSummary> {
   return apiRequest<WorkspaceSummary>(
-    `/planning-design/workspaces/${id}/summary`,
+    `/idea-note/workspaces/${id}/summary`,
     {
       token,
       errorMessage: "워크스페이스 현황을 불러오지 못했습니다.",
@@ -98,7 +98,7 @@ export function reorderWorkspaces(
   token: string,
   workspaceIds: string[],
 ): Promise<void> {
-  return apiRequest<void>("/planning-design/workspaces/reorder", {
+  return apiRequest<void>("/idea-note/workspaces/reorder", {
     method: "POST",
     body: { workspaceIds },
     token,
@@ -109,9 +109,9 @@ export function reorderWorkspaces(
 export function getCategories(
   token: string,
   workspaceId: string,
-): Promise<PlanningDesignCategory[]> {
-  return apiRequest<PlanningDesignCategory[]>(
-    `/planning-design/workspaces/${workspaceId}/categories`,
+): Promise<IdeaNoteCategory[]> {
+  return apiRequest<IdeaNoteCategory[]>(
+    `/idea-note/workspaces/${workspaceId}/categories`,
     { token, errorMessage: "1차 주제를 불러오지 못했습니다." },
   );
 }
@@ -120,9 +120,9 @@ export function createCategory(
   token: string,
   workspaceId: string,
   body: { name: string },
-): Promise<PlanningDesignCategory> {
-  return apiRequest<PlanningDesignCategory>(
-    `/planning-design/workspaces/${workspaceId}/categories`,
+): Promise<IdeaNoteCategory> {
+  return apiRequest<IdeaNoteCategory>(
+    `/idea-note/workspaces/${workspaceId}/categories`,
     { method: "POST", body, token, errorMessage: "1차 주제를 만들지 못했습니다." },
   );
 }
@@ -131,9 +131,9 @@ export function updateCategory(
   token: string,
   id: string,
   body: { name: string },
-): Promise<PlanningDesignCategory> {
-  return apiRequest<PlanningDesignCategory>(
-    `/planning-design/categories/${id}`,
+): Promise<IdeaNoteCategory> {
+  return apiRequest<IdeaNoteCategory>(
+    `/idea-note/categories/${id}`,
     {
       method: "PATCH",
       body,
@@ -144,7 +144,7 @@ export function updateCategory(
 }
 
 export function deleteCategory(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/categories/${id}`, {
+  return apiRequest<void>(`/idea-note/categories/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "1차 주제를 삭제하지 못했습니다.",
@@ -157,7 +157,7 @@ export function reorderCategories(
   categoryIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/workspaces/${workspaceId}/categories/reorder`,
+    `/idea-note/workspaces/${workspaceId}/categories/reorder`,
     {
       method: "POST",
       body: { categoryIds },
@@ -170,9 +170,9 @@ export function reorderCategories(
 export function getSections(
   token: string,
   categoryId: string,
-): Promise<PlanningDesignSection[]> {
-  return apiRequest<PlanningDesignSection[]>(
-    `/planning-design/categories/${categoryId}/sections`,
+): Promise<IdeaNoteSection[]> {
+  return apiRequest<IdeaNoteSection[]>(
+    `/idea-note/categories/${categoryId}/sections`,
     { token, errorMessage: "2차 주제를 불러오지 못했습니다." },
   );
 }
@@ -180,8 +180,8 @@ export function getSections(
 export function createSection(
   token: string,
   body: { categoryId: string; title: string },
-): Promise<PlanningDesignSection> {
-  return apiRequest<PlanningDesignSection>("/planning-design/sections", {
+): Promise<IdeaNoteSection> {
+  return apiRequest<IdeaNoteSection>("/idea-note/sections", {
     method: "POST",
     body,
     token,
@@ -193,8 +193,8 @@ export function updateSection(
   token: string,
   id: string,
   body: { title: string },
-): Promise<PlanningDesignSection> {
-  return apiRequest<PlanningDesignSection>(`/planning-design/sections/${id}`, {
+): Promise<IdeaNoteSection> {
+  return apiRequest<IdeaNoteSection>(`/idea-note/sections/${id}`, {
     method: "PATCH",
     body,
     token,
@@ -203,7 +203,7 @@ export function updateSection(
 }
 
 export function deleteSection(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/sections/${id}`, {
+  return apiRequest<void>(`/idea-note/sections/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "2차 주제를 삭제하지 못했습니다.",
@@ -216,7 +216,7 @@ export function reorderSections(
   sectionIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/categories/${categoryId}/sections/reorder`,
+    `/idea-note/categories/${categoryId}/sections/reorder`,
     {
       method: "POST",
       body: { sectionIds },
@@ -230,22 +230,22 @@ export function reorderSections(
 export function getNotes(
   token: string,
   sectionId: string,
-): Promise<PlanningDesignDocument[]> {
-  return apiRequest<PlanningDesignDocument[]>(
-    `/planning-design/sections/${sectionId}/documents`,
-    { token, errorMessage: "기획·설계 문서를 불러오지 못했습니다." },
+): Promise<IdeaNoteDocument[]> {
+  return apiRequest<IdeaNoteDocument[]>(
+    `/idea-note/sections/${sectionId}/documents`,
+    { token, errorMessage: "아이디어 노트 문서를 불러오지 못했습니다." },
   );
 }
 
 export function createNote(
   token: string,
   body: { sectionId: string; title: string; content: string },
-): Promise<PlanningDesignDocument> {
-  return apiRequest<PlanningDesignDocument>("/planning-design/documents", {
+): Promise<IdeaNoteDocument> {
+  return apiRequest<IdeaNoteDocument>("/idea-note/documents", {
     method: "POST",
     body,
     token,
-    errorMessage: "기획·설계 문서를 만들지 못했습니다.",
+    errorMessage: "아이디어 노트 문서를 만들지 못했습니다.",
   });
 }
 
@@ -253,20 +253,20 @@ export function updateNote(
   token: string,
   id: string,
   body: { title?: string; content?: string },
-): Promise<PlanningDesignDocument> {
-  return apiRequest<PlanningDesignDocument>(`/planning-design/documents/${id}`, {
+): Promise<IdeaNoteDocument> {
+  return apiRequest<IdeaNoteDocument>(`/idea-note/documents/${id}`, {
     method: "PATCH",
     body,
     token,
-    errorMessage: "기획·설계 문서를 저장하지 못했습니다.",
+    errorMessage: "아이디어 노트 문서를 저장하지 못했습니다.",
   });
 }
 
 export function deleteNote(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/planning-design/documents/${id}`, {
+  return apiRequest<void>(`/idea-note/documents/${id}`, {
     method: "DELETE",
     token,
-    errorMessage: "기획·설계 문서를 삭제하지 못했습니다.",
+    errorMessage: "아이디어 노트 문서를 삭제하지 못했습니다.",
   });
 }
 
@@ -276,7 +276,7 @@ export function reorderNotes(
   noteIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/planning-design/sections/${sectionId}/documents/reorder`,
+    `/idea-note/sections/${sectionId}/documents/reorder`,
     {
       method: "POST",
       body: { documentIds: noteIds },

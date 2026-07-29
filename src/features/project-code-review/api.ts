@@ -71,6 +71,37 @@ export function deleteWorkspace(token: string, id: string): Promise<void> {
   });
 }
 
+export type WorkspaceSummary = {
+  categoryCount: number;
+  sectionCount: number;
+  itemCount: number;
+};
+
+export function getWorkspaceSummary(
+  token: string,
+  id: string,
+): Promise<WorkspaceSummary> {
+  return apiRequest<WorkspaceSummary>(
+    `/project-code-review/workspaces/${id}/summary`,
+    {
+      token,
+      errorMessage: "프로젝트 현황을 불러오지 못했습니다.",
+    },
+  );
+}
+
+export function reorderWorkspaces(
+  token: string,
+  workspaceIds: string[],
+): Promise<void> {
+  return apiRequest<void>("/project-code-review/workspaces/reorder", {
+    method: "POST",
+    body: { workspaceIds },
+    token,
+    errorMessage: "프로젝트 순서를 변경하지 못했습니다.",
+  });
+}
+
 // ── 1차 주제 (카테고리) ───────────────────────────────────
 export function getCategories(
   token: string,
@@ -98,6 +129,19 @@ export function deleteCategory(token: string, id: string): Promise<void> {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
+  });
+}
+
+export function updateCategory(
+  token: string,
+  id: string,
+  body: { name: string },
+): Promise<PcrCategory> {
+  return apiRequest<PcrCategory>(`/project-code-review/categories/${id}`, {
+    method: "PATCH",
+    body,
+    token,
+    errorMessage: "1차 주제 이름을 변경하지 못했습니다.",
   });
 }
 
@@ -140,6 +184,19 @@ export function deleteSection(token: string, id: string): Promise<void> {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
+  });
+}
+
+export function updateSection(
+  token: string,
+  id: string,
+  body: { title: string },
+): Promise<PcrSection> {
+  return apiRequest<PcrSection>(`/project-code-review/sections/${id}`, {
+    method: "PATCH",
+    body,
+    token,
+    errorMessage: "2차 주제 이름을 변경하지 못했습니다.",
   });
 }
 

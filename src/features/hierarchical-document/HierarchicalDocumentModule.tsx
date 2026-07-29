@@ -168,7 +168,11 @@ function HierarchicalDocumentModule({
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const [addingWorkspace, setAddingWorkspace] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
+  const [addingSection, setAddingSection] = useState(false);
+  const [creatingSection, setCreatingSection] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -193,6 +197,10 @@ function HierarchicalDocumentModule({
     setSelectedNote(null);
     setSections([]);
     setNotes([]);
+    setAddingCategory(false);
+    setNewCategoryName("");
+    setAddingSection(false);
+    setNewSectionName("");
     if (selectedWorkspace) {
       void loadCategories(selectedWorkspace);
     } else {
@@ -201,6 +209,8 @@ function HierarchicalDocumentModule({
   }, [selectedWorkspace]);
 
   useEffect(() => {
+    setAddingSection(false);
+    setNewSectionName("");
     if (selectedCategory) {
       void loadSections(selectedCategory);
     } else {
@@ -290,22 +300,6 @@ function HierarchicalDocumentModule({
     }
   }
 
-  async function removeWorkspace(id: string) {
-    const token = getToken();
-    if (!token) return;
-    try {
-      await api.deleteWorkspace(token, id);
-      const remaining = workspaces.filter((w) => w.id !== id);
-      setWorkspaces(remaining);
-      if (selectedWorkspace === id) {
-        setSelectedWorkspace(remaining[0]?.id ?? null);
-      }
-      toast.success("워크스페이스를 삭제했습니다.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "삭제하지 못했습니다.");
-    }
-  }
-
   async function renameWorkspace(id: string, title: string) {
     const token = getToken();
     const nextTitle = title.trim();
@@ -324,22 +318,41 @@ function HierarchicalDocumentModule({
 
   async function addCategory() {
     const token = getToken();
-    if (!token || !selectedWorkspace || !newCategoryName.trim()) return;
+    if (
+      !token ||
+      !selectedWorkspace ||
+      !newCategoryName.trim() ||
+      creatingCategory
+    ) {
+      return;
+    }
+    setCreatingCategory(true);
     try {
       const created = await api.createCategory(token, selectedWorkspace, {
         name: newCategoryName.trim(),
       });
       setCategories((prev) => [...prev, created]);
       setNewCategoryName("");
+      setAddingCategory(false);
       toast.success("카테고리를 추가했습니다.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "추가하지 못했습니다.");
+    } finally {
+      setCreatingCategory(false);
     }
   }
 
   async function addSection() {
     const token = getToken();
-    if (!token || !selectedCategory || !newSectionName.trim()) return;
+    if (
+      !token ||
+      !selectedCategory ||
+      !newSectionName.trim() ||
+      creatingSection
+    ) {
+      return;
+    }
+    setCreatingSection(true);
     try {
       const created = await api.createSection(token, {
         categoryId: selectedCategory,
@@ -347,9 +360,12 @@ function HierarchicalDocumentModule({
       });
       setSections((prev) => [...prev, created]);
       setNewSectionName("");
+      setAddingSection(false);
       toast.success("섹션을 추가했습니다.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "추가하지 못했습니다.");
+    } finally {
+      setCreatingSection(false);
     }
   }
 
@@ -557,7 +573,6 @@ function HierarchicalDocumentModule({
             selected={selectedWorkspace === ws.id}
             onClick={() => setSelectedWorkspace(ws.id)}
             onRename={(title) => renameWorkspace(ws.id, title)}
-            onDelete={() => removeWorkspace(ws.id)}
           />
         ))}
         {addingWorkspace ? (
@@ -647,25 +662,20 @@ function HierarchicalDocumentModule({
             style={{ width: topicWidth }}
             className="flex shrink-0 flex-col border-r border-surface-border bg-surface-raised"
           >
-            <div className="flex items-center gap-1.5 border-b border-surface-border-soft px-3 py-2.5">
-              <input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return;
-                  if (e.key === "Enter") addCategory();
-                }}
-                placeholder="새 1차 주제"
-                className="min-w-0 flex-1 rounded-lg border border-surface-border bg-surface-raised px-2 py-1 text-[12px] text-text-primary outline-none focus:border-brand-border"
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                className="h-auto rounded-lg px-2 py-1 text-[11px]"
-                onClick={addCategory}
+            <div className="flex items-center justify-between border-b border-surface-border-soft px-3 py-2">
+              <span className="text-[12px] font-bold text-text-secondary">
+                1차 주제
+              </span>
+              <button
+                type="button"
+                onClick={() => setAddingCategory(true)}
+                disabled={addingCategory}
+                title="1차 주제 추가"
+                aria-label="1차 주제 추가"
+                className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition-colors hover:bg-brand-glass hover:text-brand-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-border/40 disabled:pointer-events-none disabled:opacity-30"
               >
-                +
-              </Button>
+                <Plus className="size-3.5" strokeWidth={2} />
+              </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <DndContext
@@ -690,9 +700,23 @@ function HierarchicalDocumentModule({
                       onDelete={() => removeCategory(cat.id)}
                     />
                   ))}
+                  {addingCategory && (
+                    <InlineCreateRow
+                      icon="📚"
+                      value={newCategoryName}
+                      placeholder="새 1차 주제"
+                      saving={creatingCategory}
+                      onChange={setNewCategoryName}
+                      onCommit={() => void addCategory()}
+                      onCancel={() => {
+                        setAddingCategory(false);
+                        setNewCategoryName("");
+                      }}
+                    />
+                  )}
                 </SortableContext>
               </DndContext>
-              {categories.length === 0 && (
+              {categories.length === 0 && !addingCategory && (
                 <p className="px-3 py-4 text-[12px] text-text-muted">
                   1차 주제를 추가하세요.
                 </p>
@@ -707,27 +731,20 @@ function HierarchicalDocumentModule({
             style={{ width: sectionWidth }}
             className="flex shrink-0 flex-col border-r border-surface-border bg-surface-muted"
           >
-            <div className="flex items-center gap-1.5 border-b border-surface-border-soft px-3 py-2.5">
-              <input
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return;
-                  if (e.key === "Enter") addSection();
-                }}
-                placeholder="새 2차 주제"
-                disabled={!selectedCategory}
-                className="min-w-0 flex-1 rounded-lg border border-surface-border bg-surface-raised px-2 py-1 text-[12px] text-text-primary outline-none focus:border-brand-border disabled:bg-surface-strong"
-              />
-              <Button
-                variant="primary"
-                size="sm"
-                className="h-auto rounded-lg px-2 py-1 text-[11px]"
-                onClick={addSection}
-                disabled={!selectedCategory}
+            <div className="flex items-center justify-between border-b border-surface-border-soft px-3 py-2">
+              <span className="text-[12px] font-bold text-text-secondary">
+                2차 주제
+              </span>
+              <button
+                type="button"
+                onClick={() => setAddingSection(true)}
+                disabled={!selectedCategory || addingSection}
+                title="2차 주제 추가"
+                aria-label="2차 주제 추가"
+                className="grid size-7 shrink-0 place-items-center rounded-md text-text-muted transition-colors hover:bg-brand-glass hover:text-brand-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-border/40 disabled:pointer-events-none disabled:opacity-30"
               >
-                +
-              </Button>
+                <Plus className="size-3.5" strokeWidth={2} />
+              </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               {selectedCategory ? (
@@ -753,6 +770,20 @@ function HierarchicalDocumentModule({
                         onDelete={() => removeSection(sec.id)}
                       />
                     ))}
+                    {addingSection && (
+                      <InlineCreateRow
+                        icon="📖"
+                        value={newSectionName}
+                        placeholder="새 2차 주제"
+                        saving={creatingSection}
+                        onChange={setNewSectionName}
+                        onCommit={() => void addSection()}
+                        onCancel={() => {
+                          setAddingSection(false);
+                          setNewSectionName("");
+                        }}
+                      />
+                    )}
                   </SortableContext>
                 </DndContext>
               ) : (
@@ -903,20 +934,74 @@ function HierarchicalDocumentModule({
   );
 }
 
+function InlineCreateRow({
+  icon,
+  value,
+  placeholder,
+  saving,
+  onChange,
+  onCommit,
+  onCancel,
+}: {
+  icon: string;
+  value: string;
+  placeholder: string;
+  saving: boolean;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex w-full items-center gap-2 bg-brand-glass px-3 py-2.5">
+      <span className="shrink-0">{icon}</span>
+      <input
+        autoFocus
+        aria-label={placeholder}
+        value={value}
+        readOnly={saving}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={() => {
+          if (saving) return;
+          if (value.trim()) {
+            onCommit();
+          } else {
+            onCancel();
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing || saving) return;
+          if (event.key === "Enter" && value.trim()) {
+            event.preventDefault();
+            onCommit();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onCancel();
+          }
+        }}
+        placeholder={placeholder}
+        className="min-w-0 flex-1 rounded-md border border-brand-border bg-surface-raised px-2 py-0.5 text-[13px] text-text-primary outline-none"
+      />
+      {saving && (
+        <span className="shrink-0 text-[11px] font-medium text-text-muted">
+          추가 중…
+        </span>
+      )}
+    </div>
+  );
+}
+
 function WorkspaceTab({
   workspace,
   selected,
   onClick,
   onRename,
-  onDelete,
 }: {
   workspace: HierarchicalWorkspace;
   selected: boolean;
   onClick: () => void;
   onRename: (title: string) => Promise<void>;
-  onDelete: () => void;
 }) {
-  const [confirm, setConfirm] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(workspace.title);
   const [menuPosition, setMenuPosition] = useState<ContextMenuPosition | null>(
@@ -946,7 +1031,6 @@ function WorkspaceTab({
 
   return (
     <div
-      onMouseLeave={() => setConfirm(false)}
       onContextMenu={(event) => {
         event.preventDefault();
         setMenuPosition({ x: event.clientX, y: event.clientY });
@@ -989,38 +1073,10 @@ function WorkspaceTab({
           {workspace.title}
         </button>
       )}
-      <button
-        onClick={() => {
-          if (confirm) {
-            onDelete();
-            setConfirm(false);
-          } else {
-            setConfirm(true);
-          }
-        }}
-        title={confirm ? "정말 삭제할까요?" : "워크스페이스 삭제"}
-        className={`rounded px-1 text-[11px] transition-all ${
-          confirm
-            ? selected
-              ? "bg-surface-raised/25 text-primary-foreground"
-              : "bg-destructive text-destructive-foreground"
-            : selected
-              ? "text-primary-foreground/70 hover:text-primary-foreground"
-              : "text-text-muted opacity-0 hover:text-destructive group-hover:opacity-100"
-        }`}
-      >
-        {confirm ? "삭제?" : "✕"}
-      </button>
       {menuPosition && (
         <RenameContextMenu
           position={menuPosition}
           onRename={beginEditing}
-          onDelete={() => {
-            setMenuPosition(null);
-            if (window.confirm(`"${workspace.title}" 워크스페이스를 삭제할까요?`)) {
-              onDelete();
-            }
-          }}
           onClose={() => setMenuPosition(null)}
         />
       )}
@@ -1176,7 +1232,7 @@ function RenameContextMenu({
 }: {
   position: ContextMenuPosition;
   onRename: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -1209,14 +1265,16 @@ function RenameContextMenu({
       >
         이름 변경
       </button>
-      <button
-        type="button"
-        role="menuitem"
-        onClick={onDelete}
-        className="block w-full rounded-md px-3 py-2 text-left text-destructive hover:bg-danger-glass"
-      >
-        삭제
-      </button>
+      {onDelete && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onDelete}
+          className="block w-full rounded-md px-3 py-2 text-left text-destructive hover:bg-danger-glass"
+        >
+          삭제
+        </button>
+      )}
     </div>
   );
 }
