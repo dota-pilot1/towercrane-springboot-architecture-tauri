@@ -4,7 +4,6 @@ import Signup from "./Signup";
 import type { User } from "../../entities/user";
 import { getApiTarget, setApiTarget, type ApiTarget } from "../../shared/api/client";
 import PageHeader from "../../shared/ui/PageHeader";
-import WindowControls from "../../widgets/app-shell/WindowControls";
 import {
   Card,
   CardContent,
@@ -40,7 +39,7 @@ function AuthScreen({ onSuccess }: Props) {
     >
       <PageHeader>
         <span className="text-sm font-bold text-text-primary">Towercrane Springboot Arch</span>
-        <div data-actions className="ml-auto pr-[104px]">
+        <div data-no-drag>
           <div className="inline-flex rounded-lg border border-surface-border-soft bg-surface-muted p-0.5 text-[11px] font-semibold">
             <button
               type="button"
@@ -95,10 +94,6 @@ function AuthScreen({ onSuccess }: Props) {
           )}
         </CardContent>
         </Card>
-      </div>
-
-      <div className="absolute top-0 right-0 h-12 flex items-center pr-2 z-50 pointer-events-none">
-        <WindowControls />
       </div>
     </div>
   );

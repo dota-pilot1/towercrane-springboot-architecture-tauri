@@ -27,7 +27,6 @@ import HomePage from "../home/HomePage";
 import ProfilePage from "../profile/ProfilePage";
 import SettingsPage from "../settings/SettingsPage";
 import PageHeader from "../../shared/ui/PageHeader";
-import WindowControls from "./WindowControls";
 import { useAppSettingsStore } from "../../shared/lib/app-settings-store";
 import { getRailTheme } from "../../shared/lib/rail-themes";
 import { useAppUpdate } from "../../shared/lib/useAppUpdate";
@@ -342,10 +341,6 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
         )}
       </div>
 
-      {/* 창 버튼 — 항상 창 우상단, 메인 헤더 위 오버레이 */}
-      <div className="absolute top-0 right-0 h-12 flex items-center pr-2 z-50 pointer-events-none">
-        <WindowControls />
-      </div>
     </div>
   );
 }
