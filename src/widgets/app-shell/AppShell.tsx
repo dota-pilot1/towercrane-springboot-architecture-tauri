@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  DraftingCompass,
   FileText,
+  GitPullRequest,
   Layers,
   LogOut,
   MessageCircle,
@@ -18,6 +20,9 @@ import ChatModule from "../chat/ChatModule";
 import DocsModule from "../docs/DocsModule";
 import StudyDiaryModule from "../study-diary/StudyDiaryModule";
 import ArchNoteModule from "../arch-note/ArchNoteModule";
+import PlanningDesignModule from "../planning-design/PlanningDesignModule";
+import GithubPrReviewModule from "../github-pr-review/GithubPrReviewModule";
+import ProjectCodeReviewModule from "../project-code-review/ProjectCodeReviewModule";
 import HomePage from "../home/HomePage";
 import ProfilePage from "../profile/ProfilePage";
 import SettingsPage from "../settings/SettingsPage";
@@ -33,7 +38,15 @@ type Props = {
   onLogout: () => void;
 };
 
-type ModuleId = "messenger" | "chat" | "docs" | "studydiary" | "archnote";
+type ModuleId =
+  | "messenger"
+  | "chat"
+  | "docs"
+  | "studydiary"
+  | "archnote"
+  | "planningdesign"
+  | "githubprreview"
+  | "codereview";
 type ViewId = "home" | "profile" | "settings" | ModuleId;
 
 type ModuleDef = {
@@ -46,9 +59,17 @@ type ModuleDef = {
 const MODULES: ModuleDef[] = [
   { id: "messenger", label: "메신저", icon: MessageCircle, ready: true },
   { id: "chat", label: "채팅", icon: Users, ready: true },
-  { id: "docs", label: "문서", icon: FileText, ready: true },
-  { id: "studydiary", label: "개발일지", icon: FileText, ready: true },
+  { id: "docs", label: "문서 관리", icon: FileText, ready: true },
+  { id: "studydiary", label: "스터디 노트", icon: FileText, ready: true },
   { id: "archnote", label: "아키텍처", icon: Layers, ready: true },
+  {
+    id: "planningdesign",
+    label: "기획·설계",
+    icon: DraftingCompass,
+    ready: true,
+  },
+  { id: "githubprreview", label: "PR 리뷰", icon: GitPullRequest, ready: true },
+  { id: "codereview", label: "코드리뷰", icon: GitPullRequest, ready: true },
 ];
 
 function AppShell({ user, onUserUpdate, onLogout }: Props) {
@@ -307,6 +328,12 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           <StudyDiaryModule />
         ) : activeModule?.id === "archnote" ? (
           <ArchNoteModule />
+        ) : activeModule?.id === "planningdesign" ? (
+          <PlanningDesignModule />
+        ) : activeModule?.id === "githubprreview" ? (
+          <GithubPrReviewModule />
+        ) : activeModule?.id === "codereview" ? (
+          <ProjectCodeReviewModule />
         ) : (
           <PlaceholderModule
             label={activeModule?.label ?? ""}

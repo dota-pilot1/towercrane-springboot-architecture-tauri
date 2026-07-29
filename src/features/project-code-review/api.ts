@@ -1,6 +1,6 @@
 import { apiRequest } from "../../shared/api/client";
 
-export type ArchWorkspace = {
+export type PcrWorkspace = {
   id: string;
   title: string;
   description: string | null;
@@ -8,21 +8,21 @@ export type ArchWorkspace = {
   orderIdx: number;
 };
 
-export type ArchCategory = {
+export type PcrCategory = {
   id: string;
   workspaceId: string;
   name: string;
   orderIdx: number;
 };
 
-export type ArchSection = {
+export type PcrSection = {
   id: string;
   categoryId: string;
   title: string;
   orderIdx: number;
 };
 
-export type ArchNote = {
+export type PcrNote = {
   id: string;
   sectionId: string;
   title: string;
@@ -30,23 +30,23 @@ export type ArchNote = {
   orderIdx: number;
 };
 
-// ── 워크스페이스 ──────────────────────────────────────────
-export function listWorkspaces(token: string): Promise<ArchWorkspace[]> {
-  return apiRequest<ArchWorkspace[]>("/arch-note/workspaces", {
+// ── 워크스페이스 (프로젝트) ───────────────────────────────
+export function listWorkspaces(token: string): Promise<PcrWorkspace[]> {
+  return apiRequest<PcrWorkspace[]>("/project-code-review/workspaces", {
     token,
-    errorMessage: "워크스페이스를 불러오지 못했습니다.",
+    errorMessage: "프로젝트를 불러오지 못했습니다.",
   });
 }
 
 export function createWorkspace(
   token: string,
   body: { title: string; description?: string | null; icon?: string },
-): Promise<ArchWorkspace> {
-  return apiRequest<ArchWorkspace>("/arch-note/workspaces", {
+): Promise<PcrWorkspace> {
+  return apiRequest<PcrWorkspace>("/project-code-review/workspaces", {
     method: "POST",
     body,
     token,
-    errorMessage: "워크스페이스를 만들지 못했습니다.",
+    errorMessage: "프로젝트를 만들지 못했습니다.",
   });
 }
 
@@ -54,8 +54,8 @@ export function updateWorkspace(
   token: string,
   id: string,
   body: { title?: string; description?: string | null; icon?: string },
-): Promise<ArchWorkspace> {
-  return apiRequest<ArchWorkspace>(`/arch-note/workspaces/${id}`, {
+): Promise<PcrWorkspace> {
+  return apiRequest<PcrWorkspace>(`/project-code-review/workspaces/${id}`, {
     method: "PATCH",
     body,
     token,
@@ -64,7 +64,7 @@ export function updateWorkspace(
 }
 
 export function deleteWorkspace(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/arch-note/workspaces/${id}`, {
+  return apiRequest<void>(`/project-code-review/workspaces/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
@@ -75,9 +75,9 @@ export function deleteWorkspace(token: string, id: string): Promise<void> {
 export function getCategories(
   token: string,
   workspaceId: string,
-): Promise<ArchCategory[]> {
-  return apiRequest<ArchCategory[]>(
-    `/arch-note/workspaces/${workspaceId}/categories`,
+): Promise<PcrCategory[]> {
+  return apiRequest<PcrCategory[]>(
+    `/project-code-review/workspaces/${workspaceId}/categories`,
     { token, errorMessage: "카테고리를 불러오지 못했습니다." },
   );
 }
@@ -86,28 +86,15 @@ export function createCategory(
   token: string,
   workspaceId: string,
   body: { name: string },
-): Promise<ArchCategory> {
-  return apiRequest<ArchCategory>(
-    `/arch-note/workspaces/${workspaceId}/categories`,
+): Promise<PcrCategory> {
+  return apiRequest<PcrCategory>(
+    `/project-code-review/workspaces/${workspaceId}/categories`,
     { method: "POST", body, token, errorMessage: "카테고리를 만들지 못했습니다." },
   );
 }
 
-export function updateCategory(
-  token: string,
-  id: string,
-  body: { name: string },
-): Promise<ArchCategory> {
-  return apiRequest<ArchCategory>(`/arch-note/categories/${id}`, {
-    method: "PATCH",
-    body,
-    token,
-    errorMessage: "1차 주제 이름을 변경하지 못했습니다.",
-  });
-}
-
 export function deleteCategory(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/arch-note/categories/${id}`, {
+  return apiRequest<void>(`/project-code-review/categories/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
@@ -120,7 +107,7 @@ export function reorderCategories(
   categoryIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/arch-note/workspaces/${workspaceId}/categories/reorder`,
+    `/project-code-review/workspaces/${workspaceId}/categories/reorder`,
     { method: "POST", body: { categoryIds }, token, errorMessage: "순서 변경 실패" },
   );
 }
@@ -129,9 +116,9 @@ export function reorderCategories(
 export function getSections(
   token: string,
   categoryId: string,
-): Promise<ArchSection[]> {
-  return apiRequest<ArchSection[]>(
-    `/arch-note/categories/${categoryId}/sections`,
+): Promise<PcrSection[]> {
+  return apiRequest<PcrSection[]>(
+    `/project-code-review/categories/${categoryId}/sections`,
     { token, errorMessage: "섹션을 불러오지 못했습니다." },
   );
 }
@@ -139,8 +126,8 @@ export function getSections(
 export function createSection(
   token: string,
   body: { categoryId: string; title: string },
-): Promise<ArchSection> {
-  return apiRequest<ArchSection>("/arch-note/sections", {
+): Promise<PcrSection> {
+  return apiRequest<PcrSection>("/project-code-review/sections", {
     method: "POST",
     body,
     token,
@@ -148,21 +135,8 @@ export function createSection(
   });
 }
 
-export function updateSection(
-  token: string,
-  id: string,
-  body: { title: string },
-): Promise<ArchSection> {
-  return apiRequest<ArchSection>(`/arch-note/sections/${id}`, {
-    method: "PATCH",
-    body,
-    token,
-    errorMessage: "2차 주제 이름을 변경하지 못했습니다.",
-  });
-}
-
 export function deleteSection(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/arch-note/sections/${id}`, {
+  return apiRequest<void>(`/project-code-review/sections/${id}`, {
     method: "DELETE",
     token,
     errorMessage: "삭제하지 못했습니다.",
@@ -175,27 +149,27 @@ export function reorderSections(
   sectionIds: string[],
 ): Promise<void> {
   return apiRequest<void>(
-    `/arch-note/categories/${categoryId}/sections/reorder`,
+    `/project-code-review/categories/${categoryId}/sections/reorder`,
     { method: "POST", body: { sectionIds }, token, errorMessage: "순서 변경 실패" },
   );
 }
 
-// ── 노트 ──────────────────────────────────────────────────
+// ── 노트 (리뷰 노트) ──────────────────────────────────────
 export function getNotes(
   token: string,
   sectionId: string,
-): Promise<ArchNote[]> {
-  return apiRequest<ArchNote[]>(`/arch-note/sections/${sectionId}/notes`, {
-    token,
-    errorMessage: "노트를 불러오지 못했습니다.",
-  });
+): Promise<PcrNote[]> {
+  return apiRequest<PcrNote[]>(
+    `/project-code-review/sections/${sectionId}/notes`,
+    { token, errorMessage: "노트를 불러오지 못했습니다." },
+  );
 }
 
 export function createNote(
   token: string,
   body: { sectionId: string; title: string; content: string },
-): Promise<ArchNote> {
-  return apiRequest<ArchNote>("/arch-note/notes", {
+): Promise<PcrNote> {
+  return apiRequest<PcrNote>("/project-code-review/notes", {
     method: "POST",
     body,
     token,
@@ -207,12 +181,20 @@ export function updateNote(
   token: string,
   id: string,
   body: { title?: string; content?: string },
-): Promise<ArchNote> {
-  return apiRequest<ArchNote>(`/arch-note/notes/${id}`, {
+): Promise<PcrNote> {
+  return apiRequest<PcrNote>(`/project-code-review/notes/${id}`, {
     method: "PATCH",
     body,
     token,
     errorMessage: "저장하지 못했습니다.",
+  });
+}
+
+export function deleteNote(token: string, id: string): Promise<void> {
+  return apiRequest<void>(`/project-code-review/notes/${id}`, {
+    method: "DELETE",
+    token,
+    errorMessage: "삭제하지 못했습니다.",
   });
 }
 
@@ -221,18 +203,8 @@ export function reorderNotes(
   sectionId: string,
   noteIds: string[],
 ): Promise<void> {
-  return apiRequest<void>(`/arch-note/sections/${sectionId}/notes/reorder`, {
-    method: "POST",
-    body: { noteIds },
-    token,
-    errorMessage: "순서 변경 실패",
-  });
-}
-
-export function deleteNote(token: string, id: string): Promise<void> {
-  return apiRequest<void>(`/arch-note/notes/${id}`, {
-    method: "DELETE",
-    token,
-    errorMessage: "삭제하지 못했습니다.",
-  });
+  return apiRequest<void>(
+    `/project-code-review/sections/${sectionId}/notes/reorder`,
+    { method: "POST", body: { noteIds }, token, errorMessage: "순서 변경 실패" },
+  );
 }

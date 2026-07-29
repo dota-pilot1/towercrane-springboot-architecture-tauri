@@ -19,6 +19,9 @@ import PageHeader from "../../shared/ui/PageHeader";
 import { Button } from "../../shared/ui/button";
 import { toast } from "../../shared/ui/Toast";
 import { LexicalEditor } from "../../shared/ui/lexical/lexical-editor";
+import { ColumnResizeHandle } from "../../shared/ui/ColumnResizeHandle";
+import { useColumnResize } from "../../shared/lib/useColumnResize";
+import { useAppSettingsStore } from "../../shared/lib/app-settings-store";
 import { getToken } from "../../shared/api/client";
 import {
   createCategory,
@@ -31,6 +34,7 @@ import {
   getMyNotes,
   getSectionsByCategory,
   reorderCategories,
+  reorderNotes,
   reorderSections,
   updateNote,
   type DiaryCategory,
@@ -60,6 +64,13 @@ function StudyDiaryModule() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  const topicWidth = useAppSettingsStore((s) => s.studyDiaryTopicWidth);
+  const setTopicWidth = useAppSettingsStore((s) => s.setStudyDiaryTopicWidth);
+  const sectionWidth = useAppSettingsStore((s) => s.studyDiarySectionWidth);
+  const setSectionWidth = useAppSettingsStore((s) => s.setStudyDiarySectionWidth);
+  const startTopicResize = useColumnResize(topicWidth, setTopicWidth);
+  const startSectionResize = useColumnResize(sectionWidth, setSectionWidth);
 
   useEffect(() => {
     void loadCategories();
@@ -261,6 +272,23 @@ function StudyDiaryModule() {
     }
   }
 
+  async function handleNoteReorder(event: DragEndEvent) {
+    const token = getToken();
+    const { active, over } = event;
+    if (!token || !over || active.id === over.id || !selectedSection) return;
+    const from = notes.findIndex((n) => n.id === active.id);
+    const to = notes.findIndex((n) => n.id === over.id);
+    if (from < 0 || to < 0) return;
+    const reordered = arrayMove(notes, from, to);
+    setNotes(reordered);
+    try {
+      await reorderNotes(token, selectedSection, reordered.map((n) => n.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "순서 변경 실패");
+      void loadNotes(selectedSection);
+    }
+  }
+
   const isDirty =
     selectedNote &&
     (draftTitle !== selectedNote.title ||
@@ -273,7 +301,7 @@ function StudyDiaryModule() {
     <div className="relative flex min-w-0 flex-1 flex-col">
       <PageHeader>
         <span className="text-[14px] font-bold tracking-tight text-text-primary">
-          개발일지
+          스터디 노트
         </span>
         <Button
           variant="secondary"
@@ -287,7 +315,10 @@ function StudyDiaryModule() {
 
       <div className="flex-1 flex min-h-0">
         {/* 1열: 카테고리 */}
-        <aside className="w-56 shrink-0 border-r border-slate-200 bg-white flex flex-col">
+        <aside
+          style={{ width: topicWidth }}
+          className="shrink-0 border-r border-slate-200 bg-white flex flex-col"
+        >
           <div className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
             <input
               value={newCategoryName}
@@ -342,8 +373,13 @@ function StudyDiaryModule() {
           </div>
         </aside>
 
+        <ColumnResizeHandle onMouseDown={startTopicResize} />
+
         {/* 2열: 섹션 */}
-        <aside className="w-56 shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col">
+        <aside
+          style={{ width: sectionWidth }}
+          className="shrink-0 border-r border-slate-200 bg-slate-50 flex flex-col"
+        >
           <div className="flex items-center gap-1.5 border-b border-slate-100 px-3 py-2.5">
             <input
               value={newSectionName}
@@ -397,6 +433,8 @@ function StudyDiaryModule() {
           </div>
         </aside>
 
+        <ColumnResizeHandle onMouseDown={startSectionResize} />
+
         {/* 3열: 노트 에디터 */}
         <section className="min-w-0 flex-1 overflow-y-auto bg-slate-50 flex flex-col relative">
           {!selectedSection ? (
@@ -410,7 +448,7 @@ function StudyDiaryModule() {
             </div>
           ) : !selectedNote ? (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="mx-auto w-full max-w-3xl px-8 py-7">
+              <div className="w-full max-w-5xl px-5 py-6 lg:px-6">
                 {/* 섹션 헤더 */}
                 <div className="mb-6 flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -443,30 +481,34 @@ function StudyDiaryModule() {
                     </p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    {notes.map((note) => (
-                      <div
-                        key={note.id}
-                        onClick={() => setSelectedNote(note)}
-                        className="group flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
-                      >
-                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-[16px] group-hover:bg-emerald-50">
-                          📝
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-slate-700 group-hover:text-emerald-700">
-                          {note.title || "제목 없음"}
-                        </span>
-                        <NoteDeleteButton onDelete={() => removeNote(note.id)} />
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleNoteReorder}
+                  >
+                    <SortableContext
+                      items={notes.map((n) => n.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="flex flex-col gap-2">
+                        {notes.map((note) => (
+                          <NoteRow
+                            key={note.id}
+                            note={note}
+                            onClick={() => setSelectedNote(note)}
+                            onDelete={() => removeNote(note.id)}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
               </div>
             </div>
           ) : (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="mx-auto w-full max-w-3xl px-8 py-6">
+                <div className="w-full max-w-5xl px-5 py-5 lg:px-6">
                   <button
                     onClick={() => setSelectedNote(null)}
                     className="mb-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-slate-400 hover:bg-white hover:text-emerald-600"
@@ -477,7 +519,7 @@ function StudyDiaryModule() {
                     value={draftTitle}
                     onChange={(e) => setDraftTitle(e.target.value)}
                     placeholder="노트 제목"
-                    className="min-w-0 w-full rounded-lg border border-transparent bg-transparent px-1 py-1 text-[22px] font-black text-slate-900 outline-none hover:border-slate-200 focus:border-emerald-400 focus:bg-white mb-4"
+                    className="mb-4 min-w-0 w-full rounded-lg border border-surface-border-soft bg-surface-raised px-3 py-2 text-[22px] font-black text-text-primary outline-none transition-colors hover:border-surface-border focus:border-brand-border focus:bg-surface-raised"
                   />
                   <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <LexicalEditor
@@ -490,8 +532,8 @@ function StudyDiaryModule() {
                   </div>
                 </div>
               </div>
-              <div className="shrink-0 border-t border-slate-200 bg-white px-8 py-3">
-                <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+              <div className="shrink-0 border-t border-surface-border bg-surface-raised px-5 py-3 lg:px-6">
+                <div className="flex w-full max-w-5xl items-center justify-between gap-3">
                   <button
                     onClick={() => {
                       if (
@@ -642,6 +684,41 @@ function SectionRow({
       onClick={onClick}
       onDelete={onDelete}
     />
+  );
+}
+
+function NoteRow({
+  note,
+  onClick,
+  onDelete,
+}: {
+  note: DiaryNote;
+  onClick: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useSortable({ id: note.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      className="group flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-left touch-none transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-50 text-[16px] group-hover:bg-emerald-50">
+        📝
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-slate-700 group-hover:text-emerald-700">
+        {note.title || "제목 없음"}
+      </span>
+      <NoteDeleteButton onDelete={onDelete} />
+    </div>
   );
 }
 

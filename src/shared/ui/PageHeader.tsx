@@ -8,15 +8,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 // falcon 계열 앱들이 쓰는 방식대로 window.startDragging()을 mousedown에서 직접 호출하는 방식으로
 // 교체 — 이러면 dblclick은 가로채이지 않고 정상적으로 남는다.
 function PageHeader({ children }: { children?: ReactNode }) {
-  const win = getCurrentWindow();
+  const getTauriWindow = () => {
+    if (!("__TAURI_INTERNALS__" in window)) return null;
+    return getCurrentWindow();
+  };
 
   const handleMouseDown = (e: MouseEvent<HTMLElement>) => {
     if (e.button !== 0) return;
-    void win.startDragging();
+    void getTauriWindow()?.startDragging();
   };
 
   const handleDoubleClick = () => {
-    void win.toggleMaximize();
+    void getTauriWindow()?.toggleMaximize();
   };
 
   return (

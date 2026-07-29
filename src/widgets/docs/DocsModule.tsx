@@ -647,7 +647,7 @@ function DocsModule() {
       ) : null}
       <PageHeader>
         <span className="text-[14px] font-bold tracking-tight text-text-primary">
-          문서
+          문서 관리
         </span>
         <Button
           variant="secondary"

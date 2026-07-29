@@ -1,5 +1,5 @@
 // 공용 API 클라이언트 (Tauri HTTP 플러그인 → 브라우저 CORS 우회)
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 const LOCAL_API_BASE = "http://localhost:3000/api";
 const DEPLOY_API_BASE = "https://api.hibot-docu.com/api";
@@ -63,11 +63,16 @@ export async function apiRequest<T>(path: string, opts: RequestOptions = {}): Pr
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const request = {
     method: opts.method ?? "GET",
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-  });
+  };
+  const url = `${API_BASE}${path}`;
+  const res =
+    "__TAURI_INTERNALS__" in window
+      ? await tauriFetch(url, request)
+      : await globalThis.fetch(url, request);
 
   const text = await res.text();
 

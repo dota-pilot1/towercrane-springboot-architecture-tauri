@@ -2,6 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // 네이티브 신호등(trafficLightPosition으로 화면 밖 이동) 대신 헤더 우상단에 직접 그리는 창 버튼
 function WindowControls() {
+  if (!("__TAURI_INTERNALS__" in window)) return null;
   const win = getCurrentWindow();
 
   return (

@@ -24,6 +24,7 @@ export type DiaryNote = {
   sectionId: string;
   title: string;
   content: string;
+  orderIdx: number;
 };
 
 // 내 다이어리
@@ -204,4 +205,20 @@ export function deleteNote(token: string, id: string): Promise<void> {
     token,
     errorMessage: "삭제하지 못했습니다.",
   });
+}
+
+export function reorderNotes(
+  token: string,
+  sectionId: string,
+  noteIds: string[],
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    `/study-diary/sections/${sectionId}/notes/reorder`,
+    {
+      method: "POST",
+      body: { noteIds },
+      token,
+      errorMessage: "순서를 바꾸지 못했습니다.",
+    },
+  );
 }
