@@ -5,7 +5,11 @@ import { useCallback, useEffect, useRef } from "react";
 export function useColumnResize(
   width: number,
   onChange: (width: number) => void,
-  { min = 160, max = 480 }: { min?: number; max?: number } = {},
+  {
+    min = 160,
+    max = 480,
+    direction = "normal",
+  }: { min?: number; max?: number; direction?: "normal" | "reverse" } = {},
 ) {
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
@@ -14,7 +18,10 @@ export function useColumnResize(
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (!draggingRef.current) return;
-      const delta = e.clientX - startXRef.current;
+      const delta =
+        direction === "reverse"
+          ? startXRef.current - e.clientX
+          : e.clientX - startXRef.current;
       onChange(Math.min(max, Math.max(min, startWidthRef.current + delta)));
     }
     function onMouseUp() {
@@ -26,7 +33,7 @@ export function useColumnResize(
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [onChange, min, max]);
+  }, [onChange, min, max, direction]);
 
   return useCallback(
     (e: React.MouseEvent) => {

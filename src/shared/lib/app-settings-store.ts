@@ -22,6 +22,9 @@ type AppSettingsState = {
   devHistorySectionWidth: number;
   ideaNoteTopicWidth: number;
   ideaNoteSectionWidth: number;
+  discussionNoteListWidth: number;
+  discussionNoteCommentWidth: number;
+  projectScheduleDetailWidth: number;
   codeReviewTopicWidth: number;
   codeReviewSectionWidth: number;
   studyDiaryTopicWidth: number;
@@ -41,6 +44,9 @@ type AppSettingsState = {
   setDevHistorySectionWidth: (width: number) => void;
   setIdeaNoteTopicWidth: (width: number) => void;
   setIdeaNoteSectionWidth: (width: number) => void;
+  setDiscussionNoteListWidth: (width: number) => void;
+  setDiscussionNoteCommentWidth: (width: number) => void;
+  setProjectScheduleDetailWidth: (width: number) => void;
   setCodeReviewTopicWidth: (width: number) => void;
   setCodeReviewSectionWidth: (width: number) => void;
   setStudyDiaryTopicWidth: (width: number) => void;
@@ -48,7 +54,11 @@ type AppSettingsState = {
 };
 
 function defaultTailModuleOrder(moduleIds: AppModuleId[]) {
-  const tailIds: AppModuleId[] = ["studydiary", "ideanote"];
+  const tailIds: AppModuleId[] = [
+    "projectschedule",
+    "devhistory",
+    "discussionnote",
+  ];
   const headIds = moduleIds.filter((id) => !tailIds.includes(id));
   return [
     ...headIds,
@@ -73,6 +83,9 @@ export const useAppSettingsStore = create<AppSettingsState>()(
       devHistorySectionWidth: 224, // w-56 (2차 주제)
       ideaNoteTopicWidth: 224, // w-56 (1차 주제)
       ideaNoteSectionWidth: 224, // w-56 (2차 주제)
+      discussionNoteListWidth: 420,
+      discussionNoteCommentWidth: 440,
+      projectScheduleDetailWidth: 560,
       codeReviewTopicWidth: 224, // w-56 (1차 주제)
       codeReviewSectionWidth: 224, // w-56 (2차 주제)
       studyDiaryTopicWidth: 224, // w-56 (1차 주제)
@@ -113,6 +126,12 @@ export const useAppSettingsStore = create<AppSettingsState>()(
         set({ ideaNoteTopicWidth: width }),
       setIdeaNoteSectionWidth: (width) =>
         set({ ideaNoteSectionWidth: width }),
+      setDiscussionNoteListWidth: (width) =>
+        set({ discussionNoteListWidth: width }),
+      setDiscussionNoteCommentWidth: (width) =>
+        set({ discussionNoteCommentWidth: width }),
+      setProjectScheduleDetailWidth: (width) =>
+        set({ projectScheduleDetailWidth: width }),
       setCodeReviewTopicWidth: (width) => set({ codeReviewTopicWidth: width }),
       setCodeReviewSectionWidth: (width) => set({ codeReviewSectionWidth: width }),
       setStudyDiaryTopicWidth: (width) => set({ studyDiaryTopicWidth: width }),
@@ -125,6 +144,11 @@ export const useAppSettingsStore = create<AppSettingsState>()(
         return {
           ...current,
           ...saved,
+          projectScheduleDetailWidth:
+            saved?.projectScheduleDetailWidth &&
+            saved.projectScheduleDetailWidth >= 520
+              ? saved.projectScheduleDetailWidth
+              : current.projectScheduleDetailWidth,
           moduleOrder: defaultTailModuleOrder(
             saved?.moduleOrder?.filter(isAppModuleId) ?? current.moduleOrder,
           ),

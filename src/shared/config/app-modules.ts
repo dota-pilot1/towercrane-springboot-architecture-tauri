@@ -1,5 +1,6 @@
 import {
   Code2,
+  CalendarDays,
   DraftingCompass,
   FileText,
   Layers,
@@ -19,7 +20,9 @@ export type AppModuleId =
   | "devhistory"
   | "codereview"
   | "studydiary"
-  | "ideanote";
+  | "ideanote"
+  | "projectschedule"
+  | "discussionnote";
 
 export type AppModuleDefinition = {
   id: AppModuleId;
@@ -66,13 +69,6 @@ export const APP_MODULES: AppModuleDefinition[] = [
     ready: true,
   },
   {
-    id: "devhistory",
-    label: "개발 일지",
-    description: "개발 진행 상황과 회고를 정리합니다.",
-    icon: NotebookPen,
-    ready: true,
-  },
-  {
     id: "codereview",
     label: "코드리뷰",
     description: "프로젝트 코드리뷰를 관리합니다.",
@@ -91,6 +87,27 @@ export const APP_MODULES: AppModuleDefinition[] = [
     label: "아이디어 노트",
     description: "아이디어와 가설을 정리합니다.",
     icon: Lightbulb,
+    ready: true,
+  },
+  {
+    id: "projectschedule",
+    label: "개발 일정",
+    description: "개발 일정과 기간을 달력에서 관리합니다.",
+    icon: CalendarDays,
+    ready: true,
+  },
+  {
+    id: "devhistory",
+    label: "개발 일지",
+    description: "개발 진행 상황과 회고를 정리합니다.",
+    icon: NotebookPen,
+    ready: true,
+  },
+  {
+    id: "discussionnote",
+    label: "의사결정",
+    description: "논의 주제, 댓글, 결정 요약을 관리합니다.",
+    icon: NotebookPen,
     ready: true,
   },
 ];

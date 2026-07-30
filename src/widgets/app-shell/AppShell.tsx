@@ -17,6 +17,8 @@ import ArchNoteModule from "../arch-note/ArchNoteModule";
 import PlanningDesignModule from "../planning-design/PlanningDesignModule";
 import DevHistoryModule from "../dev-history/DevHistoryModule";
 import IdeaNoteModule from "../idea-note/IdeaNoteModule";
+import DiscussionNoteModule from "../discussion-note/DiscussionNoteModule";
+import ProjectScheduleModule from "../project-schedule/ProjectScheduleModule";
 import ProjectCodeReviewModule from "../project-code-review/ProjectCodeReviewModule";
 import HomePage from "../home/HomePage";
 import ProfilePage from "../profile/ProfilePage";
@@ -318,6 +320,10 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           <DevHistoryModule />
         ) : activeModule?.id === "ideanote" ? (
           <IdeaNoteModule />
+        ) : activeModule?.id === "discussionnote" ? (
+          <DiscussionNoteModule />
+        ) : activeModule?.id === "projectschedule" ? (
+          <ProjectScheduleModule />
         ) : activeModule?.id === "codereview" ? (
           <ProjectCodeReviewModule />
         ) : (
