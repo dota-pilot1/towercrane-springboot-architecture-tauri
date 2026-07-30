@@ -304,7 +304,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
             appUpdate={appUpdate}
           />
         ) : active === "settings" ? (
-          <SettingsPage />
+          <SettingsPage user={user} appUpdate={appUpdate} />
         ) : activeModule?.id === "messenger" ? (
           <Messenger user={user} />
         ) : activeModule?.id === "chat" ? (

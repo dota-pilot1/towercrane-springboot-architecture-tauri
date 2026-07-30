@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicgirault/tauri-v2-schema/main/schema.json",
   "productName": "Towercrane Springboot Arch",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.towercrane-springboot-arch.tauri",
   "build": {
     "beforeDevCommand": "npm run dev",
