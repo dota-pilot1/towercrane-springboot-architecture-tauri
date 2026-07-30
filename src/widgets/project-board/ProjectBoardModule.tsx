@@ -77,6 +77,7 @@ function ProjectBoardModule() {
   const [savingBoard, setSavingBoard] = useState(false);
   const [savingPost, setSavingPost] = useState(false);
   const [newBoardName, setNewBoardName] = useState("");
+  const [addingBoard, setAddingBoard] = useState(false);
   const [postSearch, setPostSearch] = useState("");
   const [boardName, setBoardName] = useState("");
   const [boardDescription, setBoardDescription] = useState("");
@@ -212,6 +213,7 @@ function ProjectBoardModule() {
         orderIdx: boards.length * 10,
       });
       setNewBoardName("");
+      setAddingBoard(false);
       await loadBoards(created.id);
       toast.success("게시판을 만들었습니다.");
     } catch (error) {
@@ -327,18 +329,54 @@ function ProjectBoardModule() {
         </Button>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 gap-1 p-3">
-        <aside className="ui-panel flex min-h-0 w-[320px] shrink-0 flex-col overflow-hidden">
-          <div className="border-b border-surface-border-soft bg-surface-muted p-3">
-            <form onSubmit={handleCreateBoard} className="flex gap-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 p-3">
+        <div className="ui-panel flex min-h-[52px] shrink-0 items-center gap-2 overflow-x-auto px-3 py-2">
+          {boardsLoading ? (
+            <span className="text-sm text-text-muted">
+              게시판을 불러오는 중입니다.
+            </span>
+          ) : boards.length === 0 ? (
+            <span className="text-sm text-text-muted">
+              첫 게시판을 만들어 프로젝트 논의를 시작하세요.
+            </span>
+          ) : (
+            boards.map((board) => (
+              <BoardTab
+                key={board.id}
+                board={board}
+                active={board.id === selectedBoardId}
+                onClick={() => setSelectedBoardId(board.id)}
+              />
+            ))
+          )}
+
+          {addingBoard ? (
+            <form
+              onSubmit={handleCreateBoard}
+              className="flex min-w-[240px] shrink-0 items-center gap-2 rounded-md border border-brand-border bg-surface-raised px-2 py-1"
+            >
               <Input
+                autoFocus
                 value={newBoardName}
                 onChange={(event) => setNewBoardName(event.target.value)}
-                placeholder="새 게시판 이름"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setAddingBoard(false);
+                    setNewBoardName("");
+                  }
+                }}
+                onBlur={() => {
+                  if (!newBoardName.trim()) {
+                    setAddingBoard(false);
+                    setNewBoardName("");
+                  }
+                }}
+                placeholder="게시판 이름"
+                className="h-8"
               />
               <Button
                 type="submit"
-                size="icon"
+                size="sm-icon"
                 tone="brand"
                 disabled={!newBoardName.trim()}
                 title="게시판 추가"
@@ -347,28 +385,21 @@ function ProjectBoardModule() {
                 <Plus className="size-4" />
               </Button>
             </form>
-          </div>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-9 shrink-0 border border-dashed border-surface-border-soft px-3 text-text-secondary"
+              onClick={() => setAddingBoard(true)}
+              title="새 게시판"
+            >
+              <Plus className="size-4" />
+              게시판
+            </Button>
+          )}
+        </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {boardsLoading ? (
-              <EmptyBox>게시판을 불러오는 중입니다.</EmptyBox>
-            ) : boards.length === 0 ? (
-              <EmptyBox>왼쪽 상단에서 첫 게시판을 만드세요.</EmptyBox>
-            ) : (
-              <div className="space-y-2">
-                {boards.map((board) => (
-                  <BoardListItem
-                    key={board.id}
-                    board={board}
-                    active={board.id === selectedBoardId}
-                    onClick={() => setSelectedBoardId(board.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
-
+        <div className="flex min-h-0 flex-1 gap-1">
         <main className="ui-panel flex min-h-0 min-w-0 flex-1 overflow-hidden">
           {!selectedBoard ? (
             <div className="flex flex-1 items-center justify-center text-center">
@@ -380,13 +411,13 @@ function ProjectBoardModule() {
                   게시판을 선택하거나 새로 만드세요.
                 </p>
                 <p className="mt-1 text-[13px] text-text-muted">
-                  선택한 게시판의 글 목록과 편집기가 오른쪽에 표시됩니다.
+                  상단에서 게시판을 추가하거나 선택할 수 있습니다.
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <section className="flex min-h-0 w-[360px] shrink-0 flex-col border-r border-surface-border-soft bg-surface-raised">
+              <section className="flex min-h-0 w-[420px] shrink-0 flex-col border-r border-surface-border-soft bg-surface-raised">
                 <form
                   onSubmit={handleSaveBoard}
                   className="border-b border-surface-border-soft p-3"
@@ -548,6 +579,7 @@ function ProjectBoardModule() {
             </>
           )}
         </main>
+        </div>
       </div>
     </div>
   );
@@ -561,7 +593,7 @@ function EmptyBox({ children }: { children: string }) {
   );
 }
 
-function BoardListItem({
+function BoardTab({
   board,
   active,
   onClick,
@@ -575,28 +607,22 @@ function BoardListItem({
       type="button"
       onClick={onClick}
       className={
-        "w-full rounded-md border p-3 text-left transition-colors " +
+        "group flex h-9 max-w-[240px] shrink-0 items-center gap-2 rounded-md border px-3 text-left text-sm font-bold transition-colors " +
         (active
           ? "border-brand-border bg-brand-glass"
           : "border-surface-border-soft bg-surface-muted hover:bg-surface-raised")
       }
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-text-primary">
-            {board.name}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] leading-5 text-text-muted">
-            {board.description || "설명 없음"}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-md border border-surface-border-soft bg-surface-raised px-1.5 py-0.5 text-[11px] font-bold text-text-secondary">
-          {board.postCount}
-        </span>
-      </div>
-      <p className="mt-2 text-[11px] font-semibold text-text-muted">
-        {formatTime(board.lastPostAt)}
-      </p>
+      <MessageSquareText
+        className={
+          "size-4 shrink-0 " +
+          (active ? "text-brand-primary" : "text-text-muted")
+        }
+      />
+      <span className="min-w-0 truncate text-text-primary">{board.name}</span>
+      <span className="shrink-0 rounded-md border border-surface-border-soft bg-surface-raised px-1.5 py-0.5 text-[11px] font-bold text-text-secondary">
+        {board.postCount}
+      </span>
     </button>
   );
 }
