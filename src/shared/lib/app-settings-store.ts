@@ -7,7 +7,10 @@ import {
 } from "../config/app-modules";
 import { DEFAULT_RAIL_THEME, type RailThemeId } from "./rail-themes";
 
+const MENU_ORDER_VERSION = 3;
+
 type AppSettingsState = {
+  menuOrderVersion: number;
   notificationsEnabled: boolean;
   railTheme: RailThemeId;
   moduleOrder: AppModuleId[];
@@ -54,11 +57,7 @@ type AppSettingsState = {
 };
 
 function defaultTailModuleOrder(moduleIds: AppModuleId[]) {
-  const tailIds: AppModuleId[] = [
-    "projectschedule",
-    "devhistory",
-    "discussionnote",
-  ];
+  const tailIds: AppModuleId[] = ["projectschedule", "devhistory"];
   const headIds = moduleIds.filter((id) => !tailIds.includes(id));
   return [
     ...headIds,
@@ -66,12 +65,42 @@ function defaultTailModuleOrder(moduleIds: AppModuleId[]) {
   ];
 }
 
+function placeCommunityModulesAfterChat(moduleIds: AppModuleId[]) {
+  const communityIds: AppModuleId[] = ["discussionnote", "projectboard"];
+  const ordered = moduleIds.filter((id) => !communityIds.includes(id));
+  const chatIndex = ordered.indexOf("chat");
+  ordered.splice(
+    chatIndex >= 0 ? chatIndex + 1 : 0,
+    0,
+    ...communityIds.filter((id) => moduleIds.includes(id)),
+  );
+  return ordered;
+}
+
+function normalizeModuleOrder(
+  moduleIds: AppModuleId[],
+  options: { placeCommunityModulesAfterChat?: boolean } = {},
+) {
+  const normalized = defaultTailModuleOrder([
+    ...new Set([
+      ...moduleIds.filter((id) => isAppModuleId(id)),
+      ...DEFAULT_MODULE_ORDER,
+    ]),
+  ]);
+  return options.placeCommunityModulesAfterChat
+    ? placeCommunityModulesAfterChat(normalized)
+    : normalized;
+}
+
 export const useAppSettingsStore = create<AppSettingsState>()(
   persist(
     (set) => ({
+      menuOrderVersion: MENU_ORDER_VERSION,
       notificationsEnabled: true,
       railTheme: DEFAULT_RAIL_THEME,
-      moduleOrder: defaultTailModuleOrder(DEFAULT_MODULE_ORDER),
+      moduleOrder: normalizeModuleOrder(DEFAULT_MODULE_ORDER, {
+        placeCommunityModulesAfterChat: true,
+      }),
       hiddenModuleIds: [],
       apiDocCategoryWidth: 224, // w-56
       apiDocEndpointWidth: 256, // w-64
@@ -94,10 +123,8 @@ export const useAppSettingsStore = create<AppSettingsState>()(
       setRailTheme: (theme) => set({ railTheme: theme }),
       setModuleOrder: (moduleIds) =>
         set({
-          moduleOrder: [
-            ...new Set(moduleIds.filter((id) => isAppModuleId(id))),
-            ...DEFAULT_MODULE_ORDER.filter((id) => !moduleIds.includes(id)),
-          ],
+          moduleOrder: normalizeModuleOrder(moduleIds),
+          menuOrderVersion: MENU_ORDER_VERSION,
         }),
       setModuleVisible: (moduleId, visible) =>
         set((state) => ({
@@ -107,7 +134,10 @@ export const useAppSettingsStore = create<AppSettingsState>()(
         })),
       resetModulePreferences: () =>
         set({
-          moduleOrder: defaultTailModuleOrder(DEFAULT_MODULE_ORDER),
+          moduleOrder: normalizeModuleOrder(DEFAULT_MODULE_ORDER, {
+            placeCommunityModulesAfterChat: true,
+          }),
+          menuOrderVersion: MENU_ORDER_VERSION,
           hiddenModuleIds: [],
         }),
       setApiDocCategoryWidth: (width) => set({ apiDocCategoryWidth: width }),
@@ -141,17 +171,24 @@ export const useAppSettingsStore = create<AppSettingsState>()(
       name: "towercrane.appSettings",
       merge: (persisted, current) => {
         const saved = persisted as Partial<AppSettingsState> | undefined;
+        const shouldMigrateMenuOrder =
+          saved?.menuOrderVersion !== MENU_ORDER_VERSION;
         return {
           ...current,
           ...saved,
+          menuOrderVersion: MENU_ORDER_VERSION,
           projectScheduleDetailWidth:
             saved?.projectScheduleDetailWidth &&
             saved.projectScheduleDetailWidth >= 520
               ? saved.projectScheduleDetailWidth
               : current.projectScheduleDetailWidth,
-          moduleOrder: defaultTailModuleOrder(
-            saved?.moduleOrder?.filter(isAppModuleId) ?? current.moduleOrder,
+          moduleOrder: normalizeModuleOrder(
+            saved?.moduleOrder ?? current.moduleOrder,
+            { placeCommunityModulesAfterChat: shouldMigrateMenuOrder },
           ),
+          hiddenModuleIds:
+            saved?.hiddenModuleIds?.filter(isAppModuleId) ??
+            current.hiddenModuleIds,
         };
       },
     },

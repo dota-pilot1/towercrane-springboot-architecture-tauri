@@ -6,6 +6,7 @@ import {
   Layers,
   Lightbulb,
   MessageCircle,
+  MessageSquareText,
   NotebookPen,
   Users,
   type LucideIcon,
@@ -14,6 +15,8 @@ import {
 export type AppModuleId =
   | "messenger"
   | "chat"
+  | "discussionnote"
+  | "projectboard"
   | "docs"
   | "archnote"
   | "planningdesign"
@@ -21,8 +24,7 @@ export type AppModuleId =
   | "codereview"
   | "studydiary"
   | "ideanote"
-  | "projectschedule"
-  | "discussionnote";
+  | "projectschedule";
 
 export type AppModuleDefinition = {
   id: AppModuleId;
@@ -45,6 +47,20 @@ export const APP_MODULES: AppModuleDefinition[] = [
     label: "채팅",
     description: "팀 채널과 회의를 관리합니다.",
     icon: Users,
+    ready: true,
+  },
+  {
+    id: "discussionnote",
+    label: "의사결정",
+    description: "논의 주제, 댓글, 결정 요약을 관리합니다.",
+    icon: NotebookPen,
+    ready: true,
+  },
+  {
+    id: "projectboard",
+    label: "게시판",
+    description: "게시판과 게시글로 프로젝트 논의를 정리합니다.",
+    icon: MessageSquareText,
     ready: true,
   },
   {
@@ -100,13 +116,6 @@ export const APP_MODULES: AppModuleDefinition[] = [
     id: "devhistory",
     label: "개발 일지",
     description: "개발 진행 상황과 회고를 정리합니다.",
-    icon: NotebookPen,
-    ready: true,
-  },
-  {
-    id: "discussionnote",
-    label: "의사결정",
-    description: "논의 주제, 댓글, 결정 요약을 관리합니다.",
     icon: NotebookPen,
     ready: true,
   },

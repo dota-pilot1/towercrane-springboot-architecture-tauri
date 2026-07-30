@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type FormEvent,
   type TextareaHTMLAttributes,
 } from "react";
@@ -11,6 +12,7 @@ import {
   MessageSquareText,
   NotebookPen,
   PauseCircle,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -37,6 +39,8 @@ import {
   listDiscussionNotes,
   updateDiscussionNote,
   updateDiscussionNoteComment,
+  type DiscussionNoteComment,
+  type DiscussionNoteCommentKind,
   type DiscussionNoteDetail,
   type DiscussionNotePriority,
   type DiscussionNoteStatus,
@@ -70,6 +74,77 @@ const priorityLabels = Object.fromEntries(
   PRIORITY_OPTIONS.map((item) => [item.value, item.label]),
 ) as Record<DiscussionNotePriority, string>;
 
+const COMMENT_KIND_OPTIONS: Array<{
+  value: DiscussionNoteCommentKind;
+  label: string;
+  helper: string;
+}> = [
+  {
+    value: "OPINION",
+    label: "의견 제시",
+    helper: "주장, 제안, 근거",
+  },
+  {
+    value: "COUNTER",
+    label: "반론",
+    helper: "위험, 반대 근거, 대안",
+  },
+];
+
+const commentKindLabels = Object.fromEntries(
+  COMMENT_KIND_OPTIONS.map((item) => [item.value, item.label]),
+) as Record<DiscussionNoteCommentKind, string>;
+
+const discussionKindTones: Record<
+  DiscussionNoteCommentKind,
+  {
+    card: CSSProperties;
+    label: CSSProperties;
+    soft: CSSProperties;
+  }
+> = {
+  OPINION: {
+    card: {
+      background: "color-mix(in srgb, oklch(0.78 0.08 235) 18%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.58 0.13 235) 42%, var(--border))",
+    },
+    label: {
+      background:
+        "color-mix(in srgb, oklch(0.78 0.08 235) 28%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.58 0.13 235) 50%, var(--border))",
+      color: "var(--foreground)",
+    },
+    soft: {
+      background:
+        "color-mix(in srgb, oklch(0.78 0.08 235) 12%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.58 0.13 235) 34%, var(--border))",
+    },
+  },
+  COUNTER: {
+    card: {
+      background: "color-mix(in srgb, oklch(0.86 0.12 75) 18%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.72 0.16 55) 52%, var(--border))",
+    },
+    label: {
+      background:
+        "color-mix(in srgb, oklch(0.86 0.12 75) 32%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.72 0.16 55) 58%, var(--border))",
+      color: "var(--foreground)",
+    },
+    soft: {
+      background:
+        "color-mix(in srgb, oklch(0.86 0.12 75) 13%, var(--card))",
+      borderColor:
+        "color-mix(in srgb, oklch(0.72 0.16 55) 38%, var(--border))",
+    },
+  },
+};
+
 function formatTime(value: string | null) {
   if (!value) return "댓글 없음";
   const date = new Date(value);
@@ -86,6 +161,10 @@ function StatusIcon({ status }: { status: DiscussionNoteStatus }) {
   const option = STATUS_OPTIONS.find((item) => item.value === status);
   const Icon = option?.icon ?? Clock3;
   return <Icon className="size-3.5" />;
+}
+
+function authorInitial(name: string) {
+  return (name.trim().charAt(0) || "?").toUpperCase();
 }
 
 function Textarea({
@@ -122,26 +201,20 @@ function DiscussionNoteModule() {
   const [draftContent, setDraftContent] = useState("");
   const [draftDecisionSummary, setDraftDecisionSummary] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [newCommentKind, setNewCommentKind] =
+    useState<DiscussionNoteCommentKind>("OPINION");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [editingCommentKind, setEditingCommentKind] =
+    useState<DiscussionNoteCommentKind>("OPINION");
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const listWidth = useAppSettingsStore((state) => state.discussionNoteListWidth);
   const setListWidth = useAppSettingsStore(
     (state) => state.setDiscussionNoteListWidth,
   );
-  const commentWidth = useAppSettingsStore(
-    (state) => state.discussionNoteCommentWidth,
-  );
-  const setCommentWidth = useAppSettingsStore(
-    (state) => state.setDiscussionNoteCommentWidth,
-  );
   const startListResize = useColumnResize(listWidth, setListWidth, {
     min: 320,
     max: 640,
-  });
-  const startCommentResize = useColumnResize(commentWidth, setCommentWidth, {
-    min: 340,
-    max: 720,
-    direction: "reverse",
   });
 
   const params = useMemo(
@@ -195,6 +268,7 @@ function DiscussionNoteModule() {
       setDraftDecisionSummary(next.decisionSummary);
       setEditingCommentId(null);
       setEditingCommentContent("");
+      setEditingCommentKind("OPINION");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "상세를 불러오지 못했습니다.",
@@ -220,6 +294,11 @@ function DiscussionNoteModule() {
       draftPriority !== detail.priority ||
       draftContent !== detail.content ||
       draftDecisionSummary !== detail.decisionSummary);
+  const opinionItems =
+    detail?.comments.filter((item) => (item.kind ?? "OPINION") === "OPINION") ??
+    [];
+  const counterItems =
+    detail?.comments.filter((item) => item.kind === "COUNTER") ?? [];
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -252,6 +331,7 @@ function DiscussionNoteModule() {
         decisionSummary: draftDecisionSummary,
       });
       setDetail(updated);
+      setEditingTopicId(null);
       await loadNotes(updated.id);
       toast.success("의사결정 노트를 저장했습니다.");
     } catch (error) {
@@ -261,15 +341,18 @@ function DiscussionNoteModule() {
     }
   }
 
-  async function handleDeleteNote() {
+  async function handleDeleteNote(noteId = detail?.id ?? null) {
     const token = getToken();
-    if (!token || !detail) return;
+    if (!token || !noteId) return;
     if (!window.confirm("이 의사결정 노트를 삭제할까요?")) return;
 
     try {
-      await deleteDiscussionNote(token, detail.id);
-      setDetail(null);
-      setSelectedId(null);
+      await deleteDiscussionNote(token, noteId);
+      if (selectedId === noteId) {
+        setDetail(null);
+        setSelectedId(null);
+        setEditingTopicId(null);
+      }
       await loadNotes(null);
       toast.success("의사결정 노트를 삭제했습니다.");
     } catch (error) {
@@ -284,7 +367,10 @@ function DiscussionNoteModule() {
     if (!token || !detail || !content) return;
 
     try {
-      await createDiscussionNoteComment(token, detail.id, content);
+      await createDiscussionNoteComment(token, detail.id, {
+        content,
+        kind: newCommentKind,
+      });
       setNewComment("");
       await loadDetail(detail.id);
       await loadNotes(detail.id);
@@ -302,9 +388,13 @@ function DiscussionNoteModule() {
     if (!token || !detail || !content) return;
 
     try {
-      await updateDiscussionNoteComment(token, commentId, content);
+      await updateDiscussionNoteComment(token, commentId, {
+        content,
+        kind: editingCommentKind,
+      });
       setEditingCommentId(null);
       setEditingCommentContent("");
+      setEditingCommentKind("OPINION");
       await loadDetail(detail.id);
       await loadNotes(detail.id);
       toast.success("댓글을 저장했습니다.");
@@ -418,7 +508,32 @@ function DiscussionNoteModule() {
                     key={note.id}
                     note={note}
                     active={note.id === selectedId}
-                    onClick={() => setSelectedId(note.id)}
+                    editing={note.id === editingTopicId}
+                    draftTitle={draftTitle}
+                    draftContent={draftContent}
+                    draftStatus={draftStatus}
+                    draftPriority={draftPriority}
+                    saveDisabled={detail?.id !== note.id || !dirty || saving}
+                    onClick={() => {
+                      setSelectedId(note.id);
+                      setEditingTopicId(null);
+                    }}
+                    onEdit={() => {
+                      setSelectedId(note.id);
+                      setDraftTitle(note.title);
+                      setDraftContent(note.content);
+                      setDraftDecisionSummary(note.decisionSummary);
+                      setDraftStatus(note.status);
+                      setDraftPriority(note.priority);
+                      setEditingTopicId(note.id);
+                    }}
+                    onCancelEdit={() => setEditingTopicId(null)}
+                    onSave={(event) => void handleSave(event)}
+                    onDraftTitleChange={setDraftTitle}
+                    onDraftContentChange={setDraftContent}
+                    onDraftStatusChange={setDraftStatus}
+                    onDraftPriorityChange={setDraftPriority}
+                    onDelete={() => void handleDeleteNote(note.id)}
                   />
                 ))}
               </div>
@@ -439,7 +554,7 @@ function DiscussionNoteModule() {
                   논의를 선택하거나 새로 만드세요.
                 </p>
                 <p className="mt-1 text-[13px] text-text-muted">
-                  상세와 댓글이 오른쪽에 표시됩니다.
+                  주제 카드를 고르면 오른쪽에서 의견과 반론을 이어갑니다.
                 </p>
               </div>
             </div>
@@ -448,218 +563,97 @@ function DiscussionNoteModule() {
               상세를 불러오는 중입니다.
             </div>
           ) : (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="border-b border-surface-border-soft bg-surface-muted px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-black text-text-primary">
+                      {detail.title}
+                    </p>
+                    <p className="mt-1 text-[12px] text-text-muted">
+                      의견과 반론을 시간순으로 배치해 작성자와 흐름을 바로 봅니다.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 text-[11px] font-bold text-text-muted">
+                    <span>{opinionItems.length} 의견</span>
+                    <span>{counterItems.length} 반론</span>
+                    <span>{formatTime(detail.lastCommentAt)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <DebateTimeline
+                items={detail.comments}
+                opinionCount={opinionItems.length}
+                counterCount={counterItems.length}
+                editingCommentId={editingCommentId}
+                editingCommentContent={editingCommentContent}
+                editingCommentKind={editingCommentKind}
+                onEdit={(item) => {
+                  setEditingCommentId(item.id);
+                  setEditingCommentContent(item.content);
+                  setEditingCommentKind(item.kind ?? "OPINION");
+                }}
+                onDelete={(commentId) => void handleDeleteComment(commentId)}
+                onEditingContentChange={setEditingCommentContent}
+                onEditingKindChange={setEditingCommentKind}
+                onCancelEdit={() => {
+                  setEditingCommentId(null);
+                  setEditingCommentContent("");
+                  setEditingCommentKind("OPINION");
+                }}
+                onSaveEdit={(commentId) => void handleUpdateComment(commentId)}
+              />
+
               <form
-                onSubmit={handleSave}
-                className="border-b border-surface-border-soft bg-surface-muted p-3"
+                onSubmit={handleCreateComment}
+                className="border-t border-surface-border-soft bg-surface-raised p-3"
               >
-                <div className="grid grid-cols-[minmax(0,1fr)_130px_108px_auto_auto] gap-2">
-                  <Input
-                    value={draftTitle}
-                    onChange={(event) => setDraftTitle(event.target.value)}
-                    disabled={!detail.canEdit}
-                    className="font-bold"
+                <div className="grid grid-cols-[320px_minmax(0,1fr)_auto] gap-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {COMMENT_KIND_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setNewCommentKind(option.value)}
+                        style={
+                          newCommentKind === option.value
+                            ? discussionKindTones[option.value].label
+                            : undefined
+                        }
+                        className={
+                          "rounded-md border px-3 py-2 text-left transition-colors " +
+                          (newCommentKind === option.value
+                            ? "text-text-primary"
+                            : "border-surface-border-soft bg-surface-muted hover:bg-surface-strong")
+                        }
+                      >
+                        <span className="block text-[12px] font-black text-text-primary">
+                          {option.label}
+                        </span>
+                        <span className="block truncate text-[10px] text-text-muted">
+                          {option.helper}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea
+                    value={newComment}
+                    onChange={(event) => setNewComment(event.target.value)}
+                    placeholder={
+                      newCommentKind === "COUNTER"
+                        ? "반론이나 우려, 다른 대안을 적으세요."
+                        : "의견, 제안, 근거를 적으세요."
+                    }
+                    className="min-h-40 resize-y"
                   />
-                  <Select
-                    block
-                    value={draftStatus}
-                    onChange={(event) =>
-                      setDraftStatus(event.target.value as DiscussionNoteStatus)
-                    }
-                    disabled={!detail.canEdit}
-                  >
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    block
-                    value={draftPriority}
-                    onChange={(event) =>
-                      setDraftPriority(
-                        event.target.value as DiscussionNotePriority,
-                      )
-                    }
-                    disabled={!detail.canEdit}
-                  >
-                    {PRIORITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Button type="submit" disabled={!dirty || saving}>
-                    <Save className="size-4" />
-                    저장
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    tone="danger"
-                    disabled={!detail.canDelete}
-                    onClick={() => void handleDeleteNote()}
-                  >
-                    <Trash2 className="size-4" />
-                    삭제
+                  <Button type="submit" disabled={!newComment.trim()}>
+                    <Send className="size-4" />
+                    추가
                   </Button>
                 </div>
               </form>
-
-              <div className="flex min-h-0 flex-1">
-                <section className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3">
-                  <label className="grid gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-text-muted">
-                      논의 내용
-                    </span>
-                    <Textarea
-                      value={draftContent}
-                      onChange={(event) => setDraftContent(event.target.value)}
-                      disabled={!detail.canEdit}
-                      placeholder="논의 배경, 선택지, 쟁점을 정리하세요."
-                      className="min-h-[260px] resize-y leading-6"
-                    />
-                  </label>
-                  <label className="mt-3 grid gap-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-text-muted">
-                      결정 요약
-                    </span>
-                    <Textarea
-                      value={draftDecisionSummary}
-                      onChange={(event) =>
-                        setDraftDecisionSummary(event.target.value)
-                      }
-                      disabled={!detail.canEdit}
-                      placeholder="합의된 결론과 후속 액션을 남기세요."
-                      className="min-h-[340px] resize-y leading-6"
-                    />
-                  </label>
-                </section>
-
-                <ColumnResizeHandle onMouseDown={startCommentResize} />
-
-                <aside
-                  style={{ width: commentWidth }}
-                  className="flex min-h-0 shrink-0 flex-col border-l border-surface-border-soft bg-surface-raised"
-                >
-                  <div className="border-b border-surface-border-soft px-3 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-text-primary">
-                        댓글 {detail.comments.length}
-                      </span>
-                      <span className="text-[11px] font-semibold text-text-muted">
-                        {formatTime(detail.lastCommentAt)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
-                    {detail.comments.length === 0 ? (
-                      <div className="rounded-md border border-surface-border-soft bg-surface-muted p-3 text-sm text-text-muted">
-                        아직 댓글이 없습니다.
-                      </div>
-                    ) : null}
-                    {detail.comments.map((item) => {
-                      const editing = item.id === editingCommentId;
-                      return (
-                        <article
-                          key={item.id}
-                          className="rounded-md border border-surface-border-soft bg-background p-3"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-text-primary">
-                                {item.createdByName}
-                              </p>
-                              <p className="text-[11px] text-text-muted">
-                                {formatTime(item.createdAt)}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              {item.canEdit ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingCommentId(item.id);
-                                    setEditingCommentContent(item.content);
-                                  }}
-                                >
-                                  수정
-                                </Button>
-                              ) : null}
-                              {item.canDelete ? (
-                                <Button
-                                  size="sm-icon"
-                                  tone="danger"
-                                  title="댓글 삭제"
-                                  aria-label="댓글 삭제"
-                                  onClick={() => void handleDeleteComment(item.id)}
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </Button>
-                              ) : null}
-                            </div>
-                          </div>
-                          {editing ? (
-                            <div className="mt-2 grid gap-2">
-                              <Textarea
-                                value={editingCommentContent}
-                                onChange={(event) =>
-                                  setEditingCommentContent(event.target.value)
-                                }
-                                className="min-h-20 resize-y"
-                              />
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingCommentId(null);
-                                    setEditingCommentContent("");
-                                  }}
-                                >
-                                  취소
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => void handleUpdateComment(item.id)}
-                                >
-                                  저장
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-text-secondary">
-                              {item.content}
-                            </p>
-                          )}
-                        </article>
-                      );
-                    })}
-                  </div>
-
-                  <form
-                    onSubmit={handleCreateComment}
-                    className="border-t border-surface-border-soft p-3"
-                  >
-                    <Textarea
-                      value={newComment}
-                      onChange={(event) => setNewComment(event.target.value)}
-                      placeholder="댓글을 입력하세요."
-                      className="min-h-20 resize-none"
-                    />
-                    <div className="mt-2 flex justify-end">
-                      <Button type="submit" disabled={!newComment.trim()}>
-                        <Send className="size-4" />
-                        댓글
-                      </Button>
-                    </div>
-                  </form>
-                </aside>
-              </div>
-            </>
+            </div>
           )}
         </main>
       </div>
@@ -667,21 +661,392 @@ function DiscussionNoteModule() {
   );
 }
 
+function DebateTimeline({
+  items,
+  opinionCount,
+  counterCount,
+  editingCommentId,
+  editingCommentContent,
+  editingCommentKind,
+  onEdit,
+  onDelete,
+  onEditingContentChange,
+  onEditingKindChange,
+  onCancelEdit,
+  onSaveEdit,
+}: {
+  items: DiscussionNoteComment[];
+  opinionCount: number;
+  counterCount: number;
+  editingCommentId: string | null;
+  editingCommentContent: string;
+  editingCommentKind: DiscussionNoteCommentKind;
+  onEdit: (item: DiscussionNoteComment) => void;
+  onDelete: (commentId: string) => void;
+  onEditingContentChange: (content: string) => void;
+  onEditingKindChange: (kind: DiscussionNoteCommentKind) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (commentId: string) => void;
+}) {
+  return (
+    <section className="flex min-h-0 flex-1 flex-col">
+      <div className="grid grid-cols-2 border-b border-surface-border-soft bg-surface-raised">
+        <div
+          className="flex items-center justify-between gap-2 px-4 py-3"
+          style={discussionKindTones.OPINION.soft}
+        >
+          <div>
+            <h3 className="text-sm font-black text-text-primary">의견 제시</h3>
+            <p className="mt-0.5 text-[11px] text-text-muted">
+              주장, 제안, 근거
+            </p>
+          </div>
+          <span className="rounded-md border border-surface-border-soft bg-surface-muted px-2 py-1 text-[11px] font-black text-text-secondary">
+            {opinionCount}
+          </span>
+        </div>
+        <div
+          className="flex items-center justify-between gap-2 border-l border-surface-border-soft px-4 py-3"
+          style={discussionKindTones.COUNTER.soft}
+        >
+          <div>
+            <h3 className="text-sm font-black text-text-primary">반론</h3>
+            <p className="mt-0.5 text-[11px] text-text-muted">
+              위험, 반대 근거, 대안
+            </p>
+          </div>
+          <span className="rounded-md border border-surface-border-soft bg-surface-muted px-2 py-1 text-[11px] font-black text-text-secondary">
+            {counterCount}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative min-h-0 flex-1 overflow-y-auto p-4 before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-surface-border-soft">
+        {items.length === 0 ? (
+          <div className="relative rounded-md border border-surface-border-soft bg-surface-muted p-4 text-sm text-text-muted">
+            아직 등록된 토론 항목이 없습니다.
+          </div>
+        ) : null}
+        <div className="relative space-y-4">
+          {items.map((item, itemIndex) => {
+            const counter = item.kind === "COUNTER";
+            return (
+              <div key={item.id} className="grid grid-cols-2 gap-8">
+                <div>
+                  {!counter ? (
+                    <DebateCard
+                      item={item}
+                      index={itemIndex + 1}
+                      editing={item.id === editingCommentId}
+                      editingCommentContent={editingCommentContent}
+                      editingCommentKind={editingCommentKind}
+                      onEdit={() => onEdit(item)}
+                      onDelete={() => onDelete(item.id)}
+                      onEditingContentChange={onEditingContentChange}
+                      onEditingKindChange={onEditingKindChange}
+                      onCancelEdit={onCancelEdit}
+                      onSaveEdit={() => onSaveEdit(item.id)}
+                    />
+                  ) : null}
+                </div>
+                <div>
+                  {counter ? (
+                    <DebateCard
+                      item={item}
+                      index={itemIndex + 1}
+                      editing={item.id === editingCommentId}
+                      editingCommentContent={editingCommentContent}
+                      editingCommentKind={editingCommentKind}
+                      onEdit={() => onEdit(item)}
+                      onDelete={() => onDelete(item.id)}
+                      onEditingContentChange={onEditingContentChange}
+                      onEditingKindChange={onEditingKindChange}
+                      onCancelEdit={onCancelEdit}
+                      onSaveEdit={() => onSaveEdit(item.id)}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DebateCard({
+  item,
+  index,
+  editing,
+  editingCommentContent,
+  editingCommentKind,
+  onEdit,
+  onDelete,
+  onEditingContentChange,
+  onEditingKindChange,
+  onCancelEdit,
+  onSaveEdit,
+}: {
+  item: DiscussionNoteComment;
+  index: number;
+  editing: boolean;
+  editingCommentContent: string;
+  editingCommentKind: DiscussionNoteCommentKind;
+  onEdit: () => void;
+  onDelete: () => void;
+  onEditingContentChange: (content: string) => void;
+  onEditingKindChange: (kind: DiscussionNoteCommentKind) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+}) {
+  const kind = item.kind ?? "OPINION";
+  const tone = discussionKindTones[kind];
+  return (
+    <article
+      className="rounded-md border border-l-4 p-3 shadow-sm"
+      style={tone.card}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full border text-[13px] font-black text-text-primary"
+            style={tone.soft}
+          >
+            {authorInitial(item.createdByName)}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className="inline-flex rounded-sm border px-2 py-0.5 text-[11px] font-black"
+                style={tone.label}
+              >
+                {commentKindLabels[kind]}
+              </span>
+              <span className="text-[11px] font-black text-text-muted">
+                #{index}
+              </span>
+            </div>
+            <p className="mt-1 truncate text-sm font-black text-text-primary">
+              {item.createdByName}
+            </p>
+            <p className="text-[11px] text-text-muted">
+              {formatTime(item.createdAt)}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {item.canEdit ? (
+            <Button
+              variant="ghost"
+              size="sm-icon"
+              onClick={onEdit}
+              title="수정"
+              aria-label="수정"
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+          ) : null}
+          {item.canDelete ? (
+            <Button
+              size="sm-icon"
+              tone="danger"
+              title="토론 항목 삭제"
+              aria-label="토론 항목 삭제"
+              onClick={onDelete}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {editing ? (
+        <div className="mt-2 grid gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            {COMMENT_KIND_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onEditingKindChange(option.value)}
+                style={
+                  editingCommentKind === option.value
+                    ? discussionKindTones[option.value].label
+                    : undefined
+                }
+                className={
+                  "rounded-md border px-3 py-2 text-left text-[12px] font-bold transition-colors " +
+                  (editingCommentKind === option.value
+                    ? "text-text-primary"
+                    : "border-surface-border-soft bg-surface-muted text-text-secondary hover:bg-surface-strong")
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <Textarea
+            value={editingCommentContent}
+            onChange={(event) => onEditingContentChange(event.target.value)}
+            className="min-h-40 resize-y"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={onCancelEdit}>
+              취소
+            </Button>
+            <Button size="sm" onClick={onSaveEdit}>
+              저장
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-text-secondary">
+          {item.content}
+        </p>
+      )}
+    </article>
+  );
+}
+
 function NoteListItem({
   note,
   active,
+  editing,
+  draftTitle,
+  draftContent,
+  draftStatus,
+  draftPriority,
+  saveDisabled,
   onClick,
+  onEdit,
+  onCancelEdit,
+  onSave,
+  onDraftTitleChange,
+  onDraftContentChange,
+  onDraftStatusChange,
+  onDraftPriorityChange,
+  onDelete,
 }: {
   note: DiscussionNoteSummary;
   active: boolean;
+  editing: boolean;
+  draftTitle: string;
+  draftContent: string;
+  draftStatus: DiscussionNoteStatus;
+  draftPriority: DiscussionNotePriority;
+  saveDisabled: boolean;
   onClick: () => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => void;
+  onDraftTitleChange: (value: string) => void;
+  onDraftContentChange: (value: string) => void;
+  onDraftStatusChange: (value: DiscussionNoteStatus) => void;
+  onDraftPriorityChange: (value: DiscussionNotePriority) => void;
+  onDelete: () => void;
 }) {
+  if (editing) {
+    return (
+      <form
+        onSubmit={onSave}
+        className="grid gap-2 rounded-md border border-brand-border bg-brand-glass p-3"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-black uppercase text-text-muted">
+            주제 수정
+          </span>
+          <span className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm-icon"
+              onClick={onCancelEdit}
+              title="취소"
+              aria-label="취소"
+            >
+              <XCircle className="size-4" />
+            </Button>
+            <Button
+              type="submit"
+              size="sm-icon"
+              tone="brand"
+              disabled={saveDisabled}
+              title="저장"
+              aria-label="저장"
+            >
+              <Save className="size-4" />
+            </Button>
+            {note.canDelete ? (
+              <Button
+                type="button"
+                size="sm-icon"
+                tone="danger"
+                onClick={onDelete}
+                title="삭제"
+                aria-label="삭제"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
+          </span>
+        </div>
+        <Input
+          value={draftTitle}
+          onChange={(event) => onDraftTitleChange(event.target.value)}
+          className="font-bold"
+          placeholder="타이틀"
+        />
+        <Textarea
+          value={draftContent}
+          onChange={(event) => onDraftContentChange(event.target.value)}
+          placeholder="Description"
+          className="min-h-16 resize-none leading-6"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <Select
+            block
+            value={draftStatus}
+            onChange={(event) =>
+              onDraftStatusChange(event.target.value as DiscussionNoteStatus)
+            }
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            block
+            value={draftPriority}
+            onChange={(event) =>
+              onDraftPriorityChange(event.target.value as DiscussionNotePriority)
+            }
+          >
+            {PRIORITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       className={
-        "flex w-full flex-col gap-2 rounded-md border p-3 text-left transition " +
+        "group flex w-full cursor-pointer flex-col gap-2 rounded-md border p-3 text-left transition " +
         (active
           ? "border-brand-border bg-brand-glass"
           : "border-transparent hover:border-surface-border-soft hover:bg-surface-muted")
@@ -691,20 +1056,49 @@ function NoteListItem({
         <span className="min-w-0 flex-1 text-sm font-black text-text-primary">
           {note.title}
         </span>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-surface-border-soft bg-surface-muted px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+        <span className="flex shrink-0 items-center gap-1">
+          {note.canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
+              className="grid size-7 place-items-center rounded-md text-text-muted hover:bg-surface-raised hover:text-brand-primary"
+              title="수정"
+              aria-label="수정"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+          ) : null}
+          {note.canDelete ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              className="grid size-7 place-items-center rounded-md text-text-muted hover:bg-danger-glass hover:text-[var(--destructive)]"
+              title="삭제"
+              aria-label="삭제"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          ) : null}
+        </span>
+      </span>
+      <span className="whitespace-pre-line text-xs leading-5 text-text-secondary">
+        {note.content.trim() || "논의 설명이 비어 있습니다."}
+      </span>
+      <span className="flex items-center justify-between gap-2 text-[11px] font-semibold text-text-muted">
+        <span className="inline-flex items-center gap-1">
           <StatusIcon status={note.status} />
           {statusLabels[note.status]}
         </span>
-      </span>
-      <span className="line-clamp-2 text-xs leading-5 text-text-secondary">
-        {note.decisionSummary.trim() || "결정 요약이 비어 있습니다."}
-      </span>
-      <span className="flex items-center justify-between gap-2 text-[11px] font-semibold text-text-muted">
+        <span>{note.commentCount}토론</span>
         <span>{priorityLabels[note.priority]}</span>
-        <span>{note.commentCount}댓글</span>
-        <span>{formatTime(note.lastCommentAt ?? note.updatedAt)}</span>
       </span>
-    </button>
+    </div>
   );
 }
 

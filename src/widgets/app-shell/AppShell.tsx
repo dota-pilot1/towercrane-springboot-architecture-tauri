@@ -18,6 +18,7 @@ import PlanningDesignModule from "../planning-design/PlanningDesignModule";
 import DevHistoryModule from "../dev-history/DevHistoryModule";
 import IdeaNoteModule from "../idea-note/IdeaNoteModule";
 import DiscussionNoteModule from "../discussion-note/DiscussionNoteModule";
+import ProjectBoardModule from "../project-board/ProjectBoardModule";
 import ProjectScheduleModule from "../project-schedule/ProjectScheduleModule";
 import ProjectCodeReviewModule from "../project-code-review/ProjectCodeReviewModule";
 import HomePage from "../home/HomePage";
@@ -123,7 +124,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
         </div>
 
         {/* 모듈 버튼 */}
-        <div className="flex-1 flex flex-col items-center gap-2 pt-2">
+        <div className="min-h-0 flex-1 flex flex-col items-center gap-2 overflow-y-auto pt-2">
           {visibleModules.map((m) => {
             const isActive = m.id === active;
             // 안읽음 배지 — 메신저=DM, 채팅=채널
@@ -322,6 +323,8 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           <IdeaNoteModule />
         ) : activeModule?.id === "discussionnote" ? (
           <DiscussionNoteModule />
+        ) : activeModule?.id === "projectboard" ? (
+          <ProjectBoardModule />
         ) : activeModule?.id === "projectschedule" ? (
           <ProjectScheduleModule />
         ) : activeModule?.id === "codereview" ? (

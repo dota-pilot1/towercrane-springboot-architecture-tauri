@@ -8,6 +8,7 @@ export type DiscussionNoteStatus =
   | "CLOSED";
 
 export type DiscussionNotePriority = "LOW" | "MEDIUM" | "HIGH";
+export type DiscussionNoteCommentKind = "OPINION" | "COUNTER";
 
 export type DiscussionNoteSummary = {
   id: string;
@@ -22,11 +23,14 @@ export type DiscussionNoteSummary = {
   lastCommentAt: string | null;
   createdAt: string;
   updatedAt: string;
+  canEdit: boolean;
+  canDelete: boolean;
 };
 
 export type DiscussionNoteComment = {
   id: string;
   discussionNoteId: string;
+  kind: DiscussionNoteCommentKind;
   content: string;
   createdBy: string;
   createdByName: string;
@@ -132,13 +136,13 @@ export function deleteDiscussionNote(
 export function createDiscussionNoteComment(
   token: string,
   noteId: string,
-  content: string,
+  body: { content: string; kind?: DiscussionNoteCommentKind },
 ): Promise<DiscussionNoteComment> {
   return apiRequest<DiscussionNoteComment>(
     `/discussion-note/${noteId}/comments`,
     {
       method: "POST",
-      body: { content },
+      body,
       token,
       errorMessage: "댓글을 추가하지 못했습니다.",
     },
@@ -148,13 +152,13 @@ export function createDiscussionNoteComment(
 export function updateDiscussionNoteComment(
   token: string,
   commentId: string,
-  content: string,
+  body: { content?: string; kind?: DiscussionNoteCommentKind },
 ): Promise<DiscussionNoteComment> {
   return apiRequest<DiscussionNoteComment>(
     `/discussion-note/comments/${commentId}`,
     {
       method: "PATCH",
-      body: { content },
+      body,
       token,
       errorMessage: "댓글을 저장하지 못했습니다.",
     },

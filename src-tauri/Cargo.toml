@@ -1,6 +1,6 @@
 [package]
 name = "towercrane-springboot-architecture-tauri"
-version = "0.1.4"
+version = "0.1.5"
 description = "Spring Boot 아키텍처 논의 전용 앱"
 authors = ["you"]
 edition = "2021"
