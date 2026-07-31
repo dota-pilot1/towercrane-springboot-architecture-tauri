@@ -1,6 +1,7 @@
 import {
   Code2,
   CalendarDays,
+  CheckSquare,
   DraftingCompass,
   FileText,
   Layers,
@@ -15,6 +16,7 @@ import {
 export type AppModuleId =
   | "messenger"
   | "chat"
+  | "taskmanagement"
   | "discussionnote"
   | "projectboard"
   | "docs"
@@ -47,6 +49,13 @@ export const APP_MODULES: AppModuleDefinition[] = [
     label: "채팅",
     description: "팀 채널과 회의를 관리합니다.",
     icon: Users,
+    ready: true,
+  },
+  {
+    id: "taskmanagement",
+    label: "업무 관리",
+    description: "내 업무 워크스페이스와 할 일을 관리합니다.",
+    icon: CheckSquare,
     ready: true,
   },
   {

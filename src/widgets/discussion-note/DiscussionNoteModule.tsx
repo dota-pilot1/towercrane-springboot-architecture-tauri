@@ -4,7 +4,6 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
-  type TextareaHTMLAttributes,
 } from "react";
 import {
   CheckCircle2,
@@ -27,6 +26,7 @@ import { useColumnResize } from "../../shared/lib/useColumnResize";
 import { Button } from "../../shared/ui/button";
 import { ColumnResizeHandle } from "../../shared/ui/ColumnResizeHandle";
 import { Input } from "../../shared/ui/input";
+import { LexicalEditor } from "../../shared/ui/lexical/lexical-editor";
 import PageHeader from "../../shared/ui/PageHeader";
 import Select from "../../shared/ui/Select";
 import { toast } from "../../shared/ui/Toast";
@@ -167,19 +167,78 @@ function authorInitial(name: string) {
   return (name.trim().charAt(0) || "?").toUpperCase();
 }
 
-function Textarea({
-  className = "",
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      className={
-        "w-full rounded-md border border-surface-border-soft bg-surface-muted px-3 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-sm outline-none transition-colors focus:border-brand-border focus:bg-surface-raised focus:ring-2 focus:ring-brand-border/40 disabled:cursor-not-allowed disabled:opacity-50 " +
-        className
-      }
-      {...props}
-    />
-  );
+function isLexicalJson(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Boolean(parsed?.root?.children);
+  } catch {
+    return false;
+  }
+}
+
+function plainTextToLexicalJson(value: string) {
+  const lines = value.split(/\r?\n/);
+  return JSON.stringify({
+    root: {
+      children: (lines.length > 0 ? lines : [""]).map((line) => ({
+        children: line
+          ? [
+              {
+                detail: 0,
+                format: 0,
+                mode: "normal",
+                style: "",
+                text: line,
+                type: "text",
+                version: 1,
+              },
+            ]
+          : [],
+        direction: null,
+        format: "",
+        indent: 0,
+        type: "paragraph",
+        version: 1,
+      })),
+      direction: null,
+      format: "",
+      indent: 0,
+      type: "root",
+      version: 1,
+    },
+  });
+}
+
+function toLexicalInitialState(value: string) {
+  return isLexicalJson(value) ? value : plainTextToLexicalJson(value);
+}
+
+function textFromLexicalNode(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const record = node as { text?: unknown; children?: unknown };
+  if (typeof record.text === "string") return record.text;
+  if (!Array.isArray(record.children)) return "";
+  return record.children
+    .map((child) => textFromLexicalNode(child))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function textFromLexicalJson(value: string) {
+  try {
+    const parsed = JSON.parse(value) as { root?: unknown };
+    return textFromLexicalNode(parsed.root).replace(/\s+/g, " ").trim();
+  } catch {
+    return "";
+  }
+}
+
+function richTextSummary(value: string) {
+  return isLexicalJson(value) ? textFromLexicalJson(value) : value.trim();
+}
+
+function hasRichTextContent(value: string) {
+  return richTextSummary(value).length > 0;
 }
 
 function DiscussionNoteModule() {
@@ -201,6 +260,7 @@ function DiscussionNoteModule() {
   const [draftContent, setDraftContent] = useState("");
   const [draftDecisionSummary, setDraftDecisionSummary] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [newCommentEditorKey, setNewCommentEditorKey] = useState(0);
   const [newCommentKind, setNewCommentKind] =
     useState<DiscussionNoteCommentKind>("OPINION");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -363,8 +423,8 @@ function DiscussionNoteModule() {
   async function handleCreateComment(event: FormEvent) {
     event.preventDefault();
     const token = getToken();
-    const content = newComment.trim();
-    if (!token || !detail || !content) return;
+    const content = newComment;
+    if (!token || !detail || !hasRichTextContent(content)) return;
 
     try {
       await createDiscussionNoteComment(token, detail.id, {
@@ -372,6 +432,7 @@ function DiscussionNoteModule() {
         kind: newCommentKind,
       });
       setNewComment("");
+      setNewCommentEditorKey((value) => value + 1);
       await loadDetail(detail.id);
       await loadNotes(detail.id);
       toast.success("댓글을 추가했습니다.");
@@ -384,8 +445,8 @@ function DiscussionNoteModule() {
 
   async function handleUpdateComment(commentId: string) {
     const token = getToken();
-    const content = editingCommentContent.trim();
-    if (!token || !detail || !content) return;
+    const content = editingCommentContent;
+    if (!token || !detail || !hasRichTextContent(content)) return;
 
     try {
       await updateDiscussionNoteComment(token, commentId, {
@@ -637,17 +698,21 @@ function DiscussionNoteModule() {
                       </button>
                     ))}
                   </div>
-                  <Textarea
-                    value={newComment}
-                    onChange={(event) => setNewComment(event.target.value)}
-                    placeholder={
-                      newCommentKind === "COUNTER"
-                        ? "반론이나 우려, 다른 대안을 적으세요."
-                        : "의견, 제안, 근거를 적으세요."
-                    }
-                    className="min-h-40 resize-y"
-                  />
-                  <Button type="submit" disabled={!newComment.trim()}>
+                  <div className="overflow-visible rounded-md border border-surface-border-soft bg-surface-raised">
+                    <LexicalEditor
+                      key={`new-comment:${newCommentEditorKey}`}
+                      initialState={toLexicalInitialState(newComment)}
+                      onChange={setNewComment}
+                      placeholder={
+                        newCommentKind === "COUNTER"
+                          ? "반론이나 우려, 다른 대안을 적으세요."
+                          : "의견, 제안, 근거를 적으세요."
+                      }
+                      minHeight="140px"
+                      toolbarVariant="simple"
+                    />
+                  </div>
+                  <Button type="submit" disabled={!hasRichTextContent(newComment)}>
                     <Send className="size-4" />
                     추가
                   </Button>
@@ -885,24 +950,39 @@ function DebateCard({
               </button>
             ))}
           </div>
-          <Textarea
-            value={editingCommentContent}
-            onChange={(event) => onEditingContentChange(event.target.value)}
-            className="min-h-40 resize-y"
-          />
+          <div className="overflow-visible rounded-md border border-surface-border-soft bg-surface-raised">
+            <LexicalEditor
+              key={`${item.id}:edit`}
+              initialState={toLexicalInitialState(editingCommentContent)}
+              onChange={onEditingContentChange}
+              placeholder="의견, 제안, 근거를 적으세요."
+              minHeight="160px"
+              toolbarVariant="simple"
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={onCancelEdit}>
               취소
             </Button>
-            <Button size="sm" onClick={onSaveEdit}>
+            <Button
+              size="sm"
+              onClick={onSaveEdit}
+              disabled={!hasRichTextContent(editingCommentContent)}
+            >
               저장
             </Button>
           </div>
         </div>
       ) : (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-text-secondary">
-          {item.content}
-        </p>
+        <div className="mt-3 overflow-visible rounded-md border border-surface-border-soft bg-surface-raised">
+          <LexicalEditor
+            key={`${item.id}:read`}
+            initialState={toLexicalInitialState(item.content)}
+            onChange={() => {}}
+            readOnly
+            minHeight="80px"
+          />
+        </div>
       )}
     </article>
   );
@@ -996,12 +1076,16 @@ function NoteListItem({
           className="font-bold"
           placeholder="타이틀"
         />
-        <Textarea
-          value={draftContent}
-          onChange={(event) => onDraftContentChange(event.target.value)}
-          placeholder="Description"
-          className="min-h-16 resize-none leading-6"
-        />
+        <div className="overflow-visible rounded-md border border-surface-border-soft bg-surface-raised">
+          <LexicalEditor
+            key={`${note.id}:topic-content`}
+            initialState={toLexicalInitialState(draftContent)}
+            onChange={onDraftContentChange}
+            placeholder="논의 설명"
+            minHeight="120px"
+            toolbarVariant="simple"
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <Select
             block
@@ -1088,7 +1172,7 @@ function NoteListItem({
         </span>
       </span>
       <span className="whitespace-pre-wrap break-words px-3 pb-3 text-xs leading-5 text-text-secondary">
-        {note.content.trim() || "논의 설명이 비어 있습니다."}
+        {richTextSummary(note.content) || "논의 설명이 비어 있습니다."}
       </span>
       <span className="flex items-center justify-between gap-2 border-t border-surface-border-soft px-3 py-2 text-[11px] font-semibold text-text-muted">
         <span className="inline-flex items-center gap-1">

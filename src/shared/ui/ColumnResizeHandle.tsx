@@ -4,13 +4,16 @@ import type { MouseEvent } from "react";
 // onMouseDown 은 useColumnResize 훅이 돌려주는 핸들러를 그대로 넘긴다.
 export function ColumnResizeHandle({
   onMouseDown,
+  title = "너비 조절",
 }: {
   onMouseDown: (e: MouseEvent) => void;
+  title?: string;
 }) {
   return (
     <div
       role="separator"
       aria-orientation="vertical"
+      title={title}
       onMouseDown={onMouseDown}
       className="group relative z-10 -ml-1 w-2 shrink-0 cursor-col-resize select-none"
     >

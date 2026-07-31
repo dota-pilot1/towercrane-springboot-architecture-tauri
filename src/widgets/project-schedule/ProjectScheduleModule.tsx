@@ -146,9 +146,10 @@ function ProjectScheduleModule() {
   const setDetailWidth = useAppSettingsStore(
     (state) => state.setProjectScheduleDetailWidth,
   );
-  const startDetailResize = useColumnResize(detailWidth, setDetailWidth, {
-    min: 520,
-    max: 780,
+  const effectiveDetailWidth = Math.max(detailWidth, 680);
+  const startDetailResize = useColumnResize(effectiveDetailWidth, setDetailWidth, {
+    min: 640,
+    max: 960,
     direction: "reverse",
   });
 
@@ -421,17 +422,17 @@ function ProjectScheduleModule() {
 
       <div className="flex min-h-0 flex-1 p-3">
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-surface-border bg-surface-raised">
-          <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-surface-border-soft px-4 py-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => calendarRef.current?.getApi().today()}
-            >
-              오늘
-            </Button>
-            <div className="flex items-center gap-1">
+          <div className="shrink-0 border-b border-surface-border-soft px-4 py-2">
+            <div className="mx-auto flex min-h-12 w-full max-w-[980px] flex-wrap items-center gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
+                size="sm"
+                onClick={() => calendarRef.current?.getApi().today()}
+              >
+                오늘
+              </Button>
+              <Button
+                variant="secondary"
                 size="sm-icon"
                 aria-label="이전 달"
                 title="이전 달"
@@ -440,7 +441,7 @@ function ProjectScheduleModule() {
                 <ChevronLeft className="size-4" />
               </Button>
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm-icon"
                 aria-label="다음 달"
                 title="다음 달"
@@ -448,46 +449,48 @@ function ProjectScheduleModule() {
               >
                 <ChevronRight className="size-4" />
               </Button>
-            </div>
-            <strong className="mr-auto min-w-32 text-base text-text-primary">
-              {calendarTitle}
-            </strong>
+              <strong className="min-w-32 flex-1 text-center text-base text-text-primary">
+                {calendarTitle}
+              </strong>
 
-            <Button size="sm" onClick={() => startCreate()}>
-              <Plus className="size-4" />
-              일정 추가
-            </Button>
+              <Button size="sm" onClick={() => startCreate()}>
+                <Plus className="size-4" />
+                일정 추가
+              </Button>
+            </div>
           </div>
 
-          <div className="project-schedule-calendar min-h-0 flex-1 p-3">
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[dayGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              locale={koLocale}
-              headerToolbar={false}
-              height="100%"
-              fixedWeekCount={false}
-              showNonCurrentDates
-              dayMaxEvents={3}
-              events={calendarEvents}
-              datesSet={handleDatesSet}
-              dateClick={handleDateClick}
-              eventClick={handleEventClick}
-              eventClassNames={["project-schedule-event"]}
-              nowIndicator
-            />
+          <div className="project-schedule-calendar project-schedule-calendar-compact flex min-h-0 flex-1 justify-center p-3">
+            <div className="h-full w-full max-w-[980px]">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[dayGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                locale={koLocale}
+                headerToolbar={false}
+                height="100%"
+                fixedWeekCount={false}
+                showNonCurrentDates
+                dayMaxEvents={2}
+                events={calendarEvents}
+                datesSet={handleDatesSet}
+                dateClick={handleDateClick}
+                eventClick={handleEventClick}
+                eventClassNames={["project-schedule-event"]}
+                nowIndicator
+              />
+            </div>
           </div>
         </section>
 
         <ColumnResizeHandle
-          onPointerDown={startDetailResize}
+          onMouseDown={startDetailResize}
           title="일정 상세 영역 너비 조절"
         />
 
         <aside
           className="relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-md border border-surface-border bg-surface-raised"
-          style={{ width: detailWidth }}
+          style={{ width: effectiveDetailWidth }}
         >
           <div className="flex h-14 shrink-0 items-center gap-2 border-b border-surface-border-soft px-3">
             <div className="min-w-0 flex-1">

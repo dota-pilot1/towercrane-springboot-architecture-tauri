@@ -11,6 +11,7 @@ import { useMeetingInbox } from "../../features/chat/useMeetingInbox";
 import { sumUnread, useUnreadStore } from "../../features/chat/unread-store";
 import Messenger from "../messenger/Messenger";
 import ChatModule from "../chat/ChatModule";
+import TaskManagementModule from "../task-management/TaskManagementModule";
 import DocsModule from "../docs/DocsModule";
 import StudyDiaryModule from "../study-diary/StudyDiaryModule";
 import ArchNoteModule from "../arch-note/ArchNoteModule";
@@ -104,19 +105,19 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
     <div className="h-screen flex overflow-hidden relative">
       {/* 앱 레벨 아이콘 레일 (전체 높이) */}
       <nav
-        className="shrink-0 flex flex-col items-center text-white w-[72px]"
+        className="shrink-0 flex flex-col items-center text-text-on-brand w-[72px]"
         style={{ backgroundImage: railTheme.gradient }}
       >
         {/* 로고 — 레일 최상단, 클릭 시 홈 */}
-        <div className="w-full h-12 shrink-0 flex items-center justify-center border-b border-white/10">
+        <div className="w-full h-12 shrink-0 flex items-center justify-center border-b border-[color-mix(in_srgb,var(--primary-foreground)_10%,transparent)]">
           <button
             onClick={() => setActive("home")}
             title="홈"
             className={
               "flex items-center justify-center w-[44px] h-[44px] text-[22px] shadow-sm transition-all duration-300 ease-in-out " +
               (active === "home"
-                ? "bg-white/30 ring-2 ring-white/40 rounded-[14px]"
-                : "bg-white/15 hover:bg-white/25 rounded-[22px] hover:rounded-[14px]")
+                ? "bg-[color-mix(in_srgb,var(--primary-foreground)_30%,transparent)] ring-2 ring-[color-mix(in_srgb,var(--primary-foreground)_40%,transparent)] rounded-[14px]"
+                : "bg-[color-mix(in_srgb,var(--primary-foreground)_15%,transparent)] hover:bg-[color-mix(in_srgb,var(--primary-foreground)_25%,transparent)] rounded-[22px] hover:rounded-[14px]")
             }
           >
             🏗️
@@ -124,7 +125,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
         </div>
 
         {/* 모듈 버튼 */}
-        <div className="min-h-0 flex-1 flex flex-col items-center gap-2 overflow-y-auto pt-2">
+        <div className="min-h-0 flex-1 flex flex-col items-center gap-1.5 overflow-y-auto py-2">
           {visibleModules.map((m) => {
             const isActive = m.id === active;
             // 안읽음 배지 — 메신저=DM, 채팅=채널
@@ -137,29 +138,31 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
                 onClick={() => setActive(m.id)}
                 title={m.ready ? m.label : `${m.label} (준비 중)`}
                 className={
-                  "group relative flex flex-col items-center justify-center gap-0.5 w-[52px] h-[52px] transition-all duration-300 ease-in-out " +
+                  "group relative flex flex-col items-center justify-center gap-0.5 w-[50px] h-[48px] transition-all duration-300 ease-in-out " +
                   (isActive
-                    ? "bg-white/25 text-primary-foreground rounded-[16px]"
-                    : "text-white/80 hover:bg-white/15 hover:text-primary-foreground rounded-[26px] hover:rounded-[16px]")
+                    ? "bg-[color-mix(in_srgb,var(--primary-foreground)_25%,transparent)] text-text-on-brand rounded-[15px]"
+                    : "text-[color-mix(in_srgb,var(--primary-foreground)_80%,transparent)] hover:bg-[color-mix(in_srgb,var(--primary-foreground)_15%,transparent)] hover:text-text-on-brand rounded-[24px] hover:rounded-[15px]")
                 }
               >
                 {/* 왼쪽 인디케이터 — active는 길게, hover는 짧게 (디스코드 방식) */}
                 <span
                   className={
-                    "absolute top-1/2 -translate-y-1/2 -left-2.5 w-1 rounded-r-full bg-white transition-all duration-300 ease-in-out " +
-                    (isActive ? "h-7" : "h-0 group-hover:h-3")
+                    "absolute top-1/2 -translate-y-1/2 -left-2.5 w-1 rounded-r-full bg-text-on-brand transition-all duration-300 ease-in-out " +
+                    (isActive ? "h-6" : "h-0 group-hover:h-3")
                   }
                 />
-                <m.icon className="size-[21px] shrink-0" strokeWidth={2} />
-                <span className="w-full overflow-hidden px-0.5 text-center text-[10px] font-semibold leading-[1.08] opacity-100 [word-break:keep-all]">
+                <m.icon className="size-5 shrink-0" strokeWidth={2} />
+                <span className="w-full overflow-hidden px-0.5 text-center text-[9.5px] font-semibold leading-[1.05] opacity-100 [word-break:keep-all]">
                   {m.label}
                 </span>
                 {/* 안읽음 배지 — 멘션 있으면 강조 링 */}
                 {showBadge && (
                   <span
                     className={
-                      "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums bg-red-500 text-white " +
-                      (badge.mentions > 0 ? "ring-2 ring-white" : "")
+                      "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums bg-[var(--destructive)] text-text-on-brand " +
+                      (badge.mentions > 0
+                        ? "ring-2 ring-[color-mix(in_srgb,var(--primary-foreground)_90%,transparent)]"
+                        : "")
                     }
                   >
                     {badge.unread > 99 ? "99+" : badge.unread}
@@ -171,7 +174,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
         </div>
 
         {/* 사용자 / 로그아웃 */}
-        <div className="relative w-full flex flex-col items-center gap-2 py-2.5 border-t border-white/10" ref={accountRef}>
+        <div className="relative w-full flex flex-col items-center gap-2 py-2.5 border-t border-[color-mix(in_srgb,var(--primary-foreground)_10%,transparent)]" ref={accountRef}>
           <button
             onClick={() => void appUpdate.installUpdate()}
             disabled={appUpdate.state.status !== "available" || appUpdate.busy}
@@ -185,8 +188,8 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
             className={
               "grid h-[22px] w-[58px] place-items-center rounded-lg border text-[10px] font-black leading-none shadow-sm transition-colors " +
               (appUpdate.state.status === "available"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                : "cursor-default border-white/35 bg-white/20 text-white/75")
+                ? "border-brand-border bg-brand-glass text-brand-primary hover:bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
+                : "cursor-default border-[color-mix(in_srgb,var(--primary-foreground)_35%,transparent)] bg-[color-mix(in_srgb,var(--primary-foreground)_20%,transparent)] text-[color-mix(in_srgb,var(--primary-foreground)_75%,transparent)]")
             }
           >
             <span>
@@ -202,7 +205,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           {appVersion && (
             <span
               title={`Towercrane v${appVersion}`}
-              className="overflow-hidden max-h-3 opacity-100 text-[10px] font-bold text-white/85 tabular-nums select-none"
+              className="overflow-hidden max-h-3 opacity-100 text-[10px] font-bold text-[color-mix(in_srgb,var(--primary-foreground)_85%,transparent)] tabular-nums select-none"
             >
               v{appVersion}
             </span>
@@ -213,8 +216,8 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
             className={
               "w-[40px] h-[40px] flex items-center justify-center text-[17px] transition-all duration-200 " +
               (active === "settings"
-                ? "bg-white/25 text-primary-foreground ring-1 ring-white/50 rounded-[14px]"
-                : "text-white/80 hover:bg-white/15 hover:text-primary-foreground rounded-[20px] hover:rounded-[14px]")
+                ? "bg-[color-mix(in_srgb,var(--primary-foreground)_25%,transparent)] text-text-on-brand ring-1 ring-[color-mix(in_srgb,var(--primary-foreground)_50%,transparent)] rounded-[14px]"
+                : "text-[color-mix(in_srgb,var(--primary-foreground)_80%,transparent)] hover:bg-[color-mix(in_srgb,var(--primary-foreground)_15%,transparent)] hover:text-text-on-brand rounded-[20px] hover:rounded-[14px]")
             }
           >
             <Settings className="size-[18px]" strokeWidth={2} />
@@ -225,11 +228,11 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
             className={
               "grid min-h-[56px] w-[58px] place-items-center gap-1 rounded-[13px] border px-1 py-1.5 text-[9px] font-extrabold transition-all " +
               (accountOpen || active === "profile"
-                ? "border-white/60 bg-white text-slate-900 shadow-lg"
-                : "border-transparent bg-transparent text-white/85 hover:border-white/30 hover:bg-white/20 hover:text-white")
+                ? "border-[color-mix(in_srgb,var(--primary-foreground)_60%,transparent)] bg-surface-raised text-text-primary shadow-lg"
+                : "border-transparent bg-transparent text-[color-mix(in_srgb,var(--primary-foreground)_85%,transparent)] hover:border-[color-mix(in_srgb,var(--primary-foreground)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--primary-foreground)_20%,transparent)] hover:text-text-on-brand")
             }
           >
-            <span className="grid h-[38px] w-[38px] place-items-center overflow-hidden rounded-full border border-white/30 bg-white text-[14px] font-black uppercase text-slate-900">
+            <span className="grid h-[38px] w-[38px] place-items-center overflow-hidden rounded-full border border-[color-mix(in_srgb,var(--primary-foreground)_30%,transparent)] bg-surface-raised text-[14px] font-black uppercase text-text-primary">
               {user.profileImageUrl ? (
                 <img src={user.profileImageUrl} alt={displayName} className="h-full w-full object-cover" />
               ) : (
@@ -239,9 +242,9 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
             <span className="max-w-[50px] overflow-hidden text-ellipsis whitespace-nowrap">{roleName}</span>
           </button>
           {accountOpen && (
-            <div className="absolute bottom-2 left-[calc(100%+12px)] z-30 w-[248px] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-2xl">
-              <div className="flex items-center gap-2.5 border-b border-slate-100 p-3">
-                <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-slate-200 bg-emerald-50 text-sm font-black uppercase text-emerald-700 shadow-sm">
+            <div className="absolute bottom-2 left-[calc(100%+12px)] z-30 w-[248px] overflow-hidden rounded-xl border border-surface-border-soft bg-surface-raised text-text-secondary shadow-2xl">
+              <div className="flex items-center gap-2.5 border-b border-surface-border-soft p-3">
+                <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-surface-border-soft bg-brand-glass text-sm font-black uppercase text-brand-primary shadow-sm">
                   {user.profileImageUrl ? (
                     <img src={user.profileImageUrl} alt={displayName} className="h-full w-full object-cover" />
                   ) : (
@@ -249,15 +252,15 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <strong className="block truncate text-[13px] leading-5 text-slate-900">{displayName}</strong>
-                  <span className="block truncate text-xs font-semibold text-slate-400">{user.email}</span>
+                  <strong className="block truncate text-[13px] leading-5 text-text-primary">{displayName}</strong>
+                  <span className="block truncate text-xs font-semibold text-text-muted">{user.email}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-extrabold text-slate-600">
+              <div className="flex items-center justify-between gap-2 border-b border-surface-border-soft px-3 py-2">
+                <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-extrabold text-text-secondary">
                   {roleName}
                 </span>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-extrabold text-emerald-700">
+                <span className="rounded-full bg-brand-glass px-2 py-0.5 text-[11px] font-extrabold text-brand-primary">
                   로그인됨
                 </span>
               </div>
@@ -267,7 +270,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
                   setAccountOpen(false);
                   setActive("profile");
                 }}
-                className="flex min-h-10 w-full items-center gap-2 bg-white px-3 text-left text-[13px] font-extrabold text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className="flex min-h-10 w-full items-center gap-2 bg-surface-raised px-3 text-left text-[13px] font-extrabold text-text-secondary hover:bg-surface-muted hover:text-text-primary"
               >
                 <UserCircle className="size-4" />
                 <span>프로필</span>
@@ -278,7 +281,7 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
                   setAccountOpen(false);
                   onLogout();
                 }}
-                className="flex min-h-10 w-full items-center gap-2 bg-white px-3 text-left text-[13px] font-extrabold text-slate-600 hover:bg-red-50 hover:text-red-700"
+                className="flex min-h-10 w-full items-center gap-2 bg-surface-raised px-3 text-left text-[13px] font-extrabold text-text-secondary hover:bg-danger-glass hover:text-[var(--destructive)]"
               >
                 <LogOut className="size-4" />
                 <span>로그아웃</span>
@@ -309,6 +312,8 @@ function AppShell({ user, onUserUpdate, onLogout }: Props) {
           <Messenger user={user} />
         ) : activeModule?.id === "chat" ? (
           <ChatModule user={user} />
+        ) : activeModule?.id === "taskmanagement" ? (
+          <TaskManagementModule user={user} />
         ) : activeModule?.id === "docs" ? (
           <DocsModule />
         ) : activeModule?.id === "studydiary" ? (

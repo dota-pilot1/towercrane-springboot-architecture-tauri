@@ -16,6 +16,8 @@ import {
 import ChannelList from "../../features/chat/ChannelList";
 import ChatView from "../../features/chat/ChatView";
 import MemberList from "../../features/chat/MemberList";
+import { getOrgTree, type OrgNode } from "../../features/org/api";
+import OrgTree from "../../features/org/OrgTree";
 import PageHeader from "../../shared/ui/PageHeader";
 import { Button } from "../../shared/ui/button";
 import { CompactSelect } from "../../shared/ui/compact-select";
@@ -55,6 +57,9 @@ function ChatModule({ user }: Props) {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(true);
+  const [org, setOrg] = useState<OrgNode[]>([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [orgError, setOrgError] = useState<string | null>(null);
 
   const activeWs = workspaces.find((w) => w.id === activeWsId) ?? null;
   const activeChannel = channels.find((c) => c.id === activeChannelId) ?? null;
@@ -71,6 +76,20 @@ function ChatModule({ user }: Props) {
       .catch((err) =>
         setWsError(err instanceof Error ? err.message : "워크스페이스를 불러오지 못했습니다."),
       );
+  }, []);
+
+  // 채널이 없어도 오른쪽 사용자 목록은 보여준다.
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    setOrgLoading(true);
+    setOrgError(null);
+    getOrgTree(token)
+      .then(setOrg)
+      .catch((err) =>
+        setOrgError(err instanceof Error ? err.message : "사용자 목록을 불러오지 못했습니다."),
+      )
+      .finally(() => setOrgLoading(false));
   }, []);
 
   // 활성 워크스페이스의 채널 로드
@@ -147,7 +166,7 @@ function ChatModule({ user }: Props) {
   return (
     <div className="flex-1 flex overflow-hidden min-w-0">
       {/* Sidebar */}
-      <aside className="w-[270px] shrink-0 flex flex-col bg-white border-r border-slate-200">
+      <aside className="w-[270px] shrink-0 flex flex-col bg-surface-raised border-r border-surface-border-soft">
         {/* 워크스페이스 스위처 (헤더) */}
         <PageHeader>
           <Button
@@ -183,7 +202,7 @@ function ChatModule({ user }: Props) {
         {/* 워크스페이스 드롭다운 */}
         {wsMenuOpen && workspaces.length > 1 && (
           <div className="relative">
-            <div className="absolute z-20 left-2 right-2 mt-1 py-1 bg-white border border-slate-200 rounded-xl shadow-lg">
+            <div className="absolute z-20 left-2 right-2 mt-1 py-1 bg-surface-raised border border-surface-border-soft rounded-xl shadow-lg">
               {workspaces.map((w) => (
                 <button
                   key={w.id}
@@ -209,7 +228,7 @@ function ChatModule({ user }: Props) {
         {wsError ? (
           <div className="px-3 py-4 text-[13px] text-red-600">{wsError}</div>
         ) : workspaces.length === 0 ? (
-          <div className="px-3 py-4 flex flex-col gap-2.5 text-[13px] text-slate-400 leading-relaxed">
+          <div className="px-3 py-4 flex flex-col gap-2.5 text-[13px] text-text-muted leading-relaxed">
             <span>워크스페이스가 없습니다.</span>
             {canCreate ? (
               <Button
@@ -236,7 +255,7 @@ function ChatModule({ user }: Props) {
       </aside>
 
       {/* Chat */}
-      <main className="flex-1 flex flex-col bg-slate-50 min-w-0">
+      <main className="flex-1 flex flex-col bg-surface-muted min-w-0">
         {activeChannel ? (
           <ChatView
             room={activeChannel}
@@ -252,7 +271,7 @@ function ChatModule({ user }: Props) {
         ) : (
           <>
             <PageHeader />
-            <div className="flex-1 flex items-center justify-center text-center text-[15px] text-slate-400 leading-relaxed px-6">
+            <div className="flex-1 flex items-center justify-center text-center text-[15px] text-text-muted leading-relaxed px-6">
               {channels.length === 0
                 ? "채널이 없습니다. 채널을 만들어 대화를 시작하세요."
                 : "채널을 선택해 대화를 시작하세요."}
@@ -261,14 +280,22 @@ function ChatModule({ user }: Props) {
         )}
       </main>
 
-      {/* 오른쪽 멤버 패널 (채널 + 토글 ON) */}
-      {activeChannel && showMembers && (
-        <aside className="w-[240px] shrink-0 flex flex-col bg-white border-l border-slate-200">
+      {/* 오른쪽 사용자/멤버 패널 */}
+      {showMembers && (
+        <aside className="w-[260px] shrink-0 flex flex-col bg-surface-raised border-l border-surface-border-soft">
           <PageHeader>
-            <span className="text-[13px] font-bold text-slate-900">멤버</span>
-            <span className="text-[12px] text-slate-400">{members.length}</span>
+            <span className="text-[13px] font-bold text-text-primary">
+              {activeChannel ? "멤버" : "사용자"}
+            </span>
+            <span className="text-[12px] text-text-muted">
+              {activeChannel ? members.length : "조직도"}
+            </span>
           </PageHeader>
-          <MemberList members={members} loading={membersLoading} error={membersError} />
+          {activeChannel ? (
+            <MemberList members={members} loading={membersLoading} error={membersError} />
+          ) : (
+            <OrgTree nodes={org} loading={orgLoading} error={orgError} />
+          )}
         </aside>
       )}
 
@@ -313,43 +340,43 @@ function CreateChannelModal({ onClose, onCreate }: CreateChannelModalProps) {
 
   return (
     <div
-      className="absolute inset-0 z-40 flex items-center justify-center bg-slate-900/30 px-6"
+      className="absolute inset-0 z-40 flex items-center justify-center ui-overlay px-6"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="w-[360px] flex flex-col gap-3.5 p-6 bg-white rounded-2xl shadow-2xl"
+        className="w-[360px] flex flex-col gap-3.5 p-6 bg-surface-raised rounded-2xl shadow-2xl"
       >
-        <h2 className="text-base font-bold text-slate-900">채널 만들기</h2>
+        <h2 className="text-base font-bold text-text-primary">채널 만들기</h2>
 
-        <label className="flex flex-col gap-1.5 text-[13px] text-slate-600">
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
           <span>채널 이름</span>
-          <div className="flex items-center gap-1.5 px-3 bg-slate-50 border border-slate-200 rounded-xl focus-within:border-emerald-500 focus-within:bg-white">
-            <span className="text-slate-400 font-bold">#</span>
+          <div className="flex items-center gap-1.5 px-3 bg-surface-muted border border-surface-border-soft rounded-xl focus-within:border-brand-border focus-within:bg-surface-raised">
+            <span className="text-text-muted font-bold">#</span>
             <input
               autoFocus
               maxLength={60}
               placeholder="general"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="flex-1 py-2.5 text-sm text-slate-900 bg-transparent outline-none"
+              className="flex-1 py-2.5 text-sm text-text-primary bg-transparent outline-none"
             />
           </div>
         </label>
 
-        <label className="flex flex-col gap-1.5 text-[13px] text-slate-600">
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
           <span>설명 (선택)</span>
           <input
             maxLength={200}
             placeholder="이 채널의 용도"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="px-3 py-2.5 text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 focus:bg-white"
+            className="px-3 py-2.5 text-sm text-text-primary bg-surface-muted border border-surface-border-soft rounded-xl outline-none focus:border-brand-border focus:bg-surface-raised"
           />
         </label>
 
-        <label className="flex flex-col gap-1.5 text-[13px] text-slate-600">
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
           <span>종류</span>
           <CompactSelect
             value={roomType}

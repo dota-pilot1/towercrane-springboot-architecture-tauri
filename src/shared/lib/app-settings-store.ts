@@ -114,7 +114,7 @@ export const useAppSettingsStore = create<AppSettingsState>()(
       ideaNoteSectionWidth: 224, // w-56 (2차 주제)
       discussionNoteListWidth: 420,
       discussionNoteCommentWidth: 440,
-      projectScheduleDetailWidth: 560,
+      projectScheduleDetailWidth: 680,
       codeReviewTopicWidth: 224, // w-56 (1차 주제)
       codeReviewSectionWidth: 224, // w-56 (2차 주제)
       studyDiaryTopicWidth: 224, // w-56 (1차 주제)
@@ -179,7 +179,7 @@ export const useAppSettingsStore = create<AppSettingsState>()(
           menuOrderVersion: MENU_ORDER_VERSION,
           projectScheduleDetailWidth:
             saved?.projectScheduleDetailWidth &&
-            saved.projectScheduleDetailWidth >= 520
+            saved.projectScheduleDetailWidth >= 640
               ? saved.projectScheduleDetailWidth
               : current.projectScheduleDetailWidth,
           moduleOrder: normalizeModuleOrder(

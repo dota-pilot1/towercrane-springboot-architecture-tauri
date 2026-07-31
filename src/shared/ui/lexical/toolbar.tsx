@@ -263,6 +263,7 @@ export function LexicalToolbar({ className, onImageUpload, variant = 'full' }: P
         <ToolbarButton onClick={formatQuote} title="인용">
           <Quote className="size-3.5" />
         </ToolbarButton>
+        <MarkdownInsertButton />
         <LinkInsertButton />
       </div>
     )
@@ -718,7 +719,7 @@ function ColorPicker({
   }, [open])
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <ToolbarButton onClick={() => setOpen((value) => !value)} active={open} title={title}>
         {icon}
       </ToolbarButton>
@@ -756,7 +757,7 @@ function FontSizeSelect({ value, onChange }: { value: string; onChange: (value: 
       value={current}
       onChange={(event) => onChange(event.target.value)}
       title="글씨 크기"
-      wrapperClassName="w-[68px]"
+      wrapperClassName="w-[68px] shrink-0"
       className="h-8 min-h-8 [height:32px] [min-height:32px] pl-2.5 pr-7 text-xs font-semibold"
     >
       {FONT_SIZES.map((size) => (
@@ -775,7 +776,7 @@ function FontFamilySelect({ value, onChange }: { value: string; onChange: (value
       value={match ? match.value : 'inherit'}
       onChange={(event) => onChange(event.target.value)}
       title="글씨체"
-      wrapperClassName="w-[100px]"
+      wrapperClassName="w-[100px] shrink-0"
       className="h-8 min-h-8 [height:32px] [min-height:32px] pl-2.5 pr-7 text-xs font-semibold"
     >
       {FONT_FAMILIES.map((font) => (
@@ -812,7 +813,7 @@ function TableInsertButton() {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <ToolbarButton onClick={() => setOpen((value) => !value)} active={open} title="표 삽입">
         <Table className="size-3.5" />
       </ToolbarButton>
@@ -870,7 +871,7 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex size-8 items-center justify-center rounded-md transition-colors ${
+      className={`flex size-8 shrink-0 items-center justify-center rounded-md transition-colors ${
         active
           ? 'bg-brand-glass text-brand-primary'
           : 'text-text-secondary hover:bg-surface-strong hover:text-text-primary'
@@ -882,5 +883,5 @@ function ToolbarButton({
 }
 
 function Divider() {
-  return <span className="mx-1.5 h-6 w-px bg-surface-border-soft" />
+  return <span className="mx-1.5 h-6 w-px shrink-0 bg-surface-border-soft" />
 }

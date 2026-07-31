@@ -110,6 +110,25 @@
     @apply border border-surface-border-soft shadow-2xl;
   }
 
+  .lexical-editor-readonly code[data-language="mermaid"],
+  .lexical-editor-readonly code[data-language="mmd"] {
+    display: none;
+  }
+
+  .lexical-mermaid-preview {
+    @apply my-3 overflow-auto rounded-md border border-surface-border-soft bg-surface-muted p-4 text-sm text-text-primary;
+  }
+
+  .lexical-mermaid-preview svg {
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+
+  .lexical-mermaid-preview-error {
+    @apply whitespace-pre-wrap text-destructive;
+  }
+
   .editor-list-item-checked,
   .editor-list-item-unchecked {
     @apply relative list-none pl-6 text-text-primary;
@@ -172,6 +191,14 @@
   min-height: 6.5rem;
 }
 
+.project-schedule-calendar-compact .fc .fc-daygrid-day-frame {
+  min-height: 5.35rem;
+}
+
+.project-schedule-calendar-compact .fc .fc-daygrid-day-number {
+  padding: 0.4rem 0.5rem;
+}
+
 .project-schedule-calendar .fc .fc-daygrid-day:hover {
   background: color-mix(in srgb, var(--primary) 4%, transparent);
 }
@@ -217,6 +244,62 @@
 .project-schedule-drawer {
   background: color-mix(in srgb, var(--primary) 7%, var(--card));
   animation: project-schedule-drawer-in 180ms ease-out;
+}
+
+@keyframes task-detail-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes task-detail-backdrop-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes task-detail-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes task-detail-drawer-out {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.task-detail-backdrop {
+  animation: task-detail-backdrop-in 180ms ease-out;
+}
+
+.task-detail-backdrop-out {
+  animation: task-detail-backdrop-out 180ms ease-in forwards;
+}
+
+.task-detail-drawer {
+  animation: task-detail-drawer-in 180ms ease-out;
+}
+
+.task-detail-drawer-out {
+  animation: task-detail-drawer-out 180ms ease-in forwards;
 }
 
 .project-schedule-drawer.is-closing {
