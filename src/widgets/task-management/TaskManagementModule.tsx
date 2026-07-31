@@ -54,7 +54,10 @@ import Select from "../../shared/ui/Select";
 import { toast } from "../../shared/ui/Toast";
 import { Button } from "../../shared/ui/button";
 import { Input } from "../../shared/ui/input";
-import { LexicalEditor } from "../../shared/ui/lexical/lexical-editor";
+import {
+  LexicalEditor,
+  MermaidPreview,
+} from "../../shared/ui/lexical/lexical-editor";
 
 type Props = {
   user: User;
@@ -185,9 +188,102 @@ function toLexicalInitialState(value: string) {
   return isLexicalJson(value) ? value : plainTextToLexicalJson(value);
 }
 
+const MERMAID_PREFIX_PATTERN =
+  /^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|stateDiagram-v2|erDiagram|journey|gantt|pie|mindmap|timeline|gitGraph)\b/i;
+
+function isMermaidSource(source: string) {
+  return MERMAID_PREFIX_PATTERN.test(source.trim());
+}
+
+function normalizeMermaidSource(value: string) {
+  const trimmed = value.trim();
+  const fencedMatch = /^```(?:mermaid|mmd)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return (fencedMatch?.[1] ?? trimmed).trim();
+}
+
+function contentInfoFromPlainText(value: string) {
+  const lines = value.split(/\r?\n/);
+  const kept: string[] = [];
+  let hasMermaid = false;
+  let insideMermaidFence = false;
+  let insidePlainMermaidBlock = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (insideMermaidFence) {
+      if (trimmed.startsWith("```")) insideMermaidFence = false;
+      continue;
+    }
+    if (insidePlainMermaidBlock) {
+      if (!trimmed) insidePlainMermaidBlock = false;
+      continue;
+    }
+    if (/^```(?:mermaid|mmd)\b/i.test(trimmed)) {
+      hasMermaid = true;
+      insideMermaidFence = true;
+      continue;
+    }
+    if (isMermaidSource(trimmed)) {
+      hasMermaid = true;
+      insidePlainMermaidBlock = true;
+      continue;
+    }
+    kept.push(line);
+  }
+
+  return {
+    hasMermaid,
+    summary: kept.join(" ").replace(/\s+/g, " ").trim(),
+  };
+}
+
+function codeTextFromLexicalNode(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const record = node as { text?: unknown; children?: unknown };
+  if (typeof record.text === "string") return record.text;
+  if (!Array.isArray(record.children)) return "";
+  return record.children
+    .map((child) => codeTextFromLexicalNode(child))
+    .filter(Boolean)
+    .join("\n");
+}
+
+function lexicalNodeContainsMermaid(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  const record = node as {
+    children?: unknown;
+    language?: unknown;
+    text?: unknown;
+    type?: unknown;
+  };
+  if (record.type === "code") {
+    const language = typeof record.language === "string" ? record.language.toLowerCase() : "";
+    const source = codeTextFromLexicalNode(node);
+    if (language === "mermaid" || language === "mmd" || isMermaidSource(source)) {
+      return true;
+    }
+  }
+  return Array.isArray(record.children)
+    ? record.children.some((child) => lexicalNodeContainsMermaid(child))
+    : false;
+}
+
 function textFromLexicalNode(node: unknown): string {
   if (!node || typeof node !== "object") return "";
-  const record = node as { text?: unknown; children?: unknown; type?: unknown };
+  const record = node as {
+    children?: unknown;
+    language?: unknown;
+    text?: unknown;
+    type?: unknown;
+  };
+  if (record.type === "code") {
+    const language = typeof record.language === "string" ? record.language.toLowerCase() : "";
+    const source = codeTextFromLexicalNode(node);
+    if (language === "mermaid" || language === "mmd" || isMermaidSource(source)) {
+      return "";
+    }
+    return source;
+  }
   if (typeof record.text === "string") return record.text;
   if (!Array.isArray(record.children)) return "";
   return record.children
@@ -196,17 +292,23 @@ function textFromLexicalNode(node: unknown): string {
     .join(" ");
 }
 
-function textFromLexicalJson(value: string) {
+function contentInfoFromLexicalJson(value: string) {
   try {
     const parsed = JSON.parse(value) as { root?: unknown };
-    return textFromLexicalNode(parsed.root).replace(/\s+/g, " ").trim();
+    return {
+      hasMermaid: lexicalNodeContainsMermaid(parsed.root),
+      summary: textFromLexicalNode(parsed.root).replace(/\s+/g, " ").trim(),
+    };
   } catch {
-    return "";
+    return { hasMermaid: false, summary: "" };
   }
 }
 
-function taskContentSummary(value: string) {
-  return isLexicalJson(value) ? textFromLexicalJson(value) : value.trim();
+function taskContentInfo(value: string) {
+  if (!isLexicalJson(value)) {
+    return contentInfoFromPlainText(value);
+  }
+  return contentInfoFromLexicalJson(value);
 }
 
 function messageFromError(error: unknown, fallback: string) {
@@ -607,6 +709,8 @@ function TaskCard({
   onArchive: () => void;
   busy: boolean;
 }) {
+  const contentInfo = taskContentInfo(task.content);
+
   return (
     <article className="rounded-md border border-surface-border-soft bg-surface-raised p-4 shadow-sm transition-colors hover:border-brand-border">
       <div className="flex items-start justify-between gap-3">
@@ -630,10 +734,16 @@ function TaskCard({
         </button>
       </div>
 
-      {taskContentSummary(task.content) ? (
+      {contentInfo.summary ? (
         <p className="mt-2 line-clamp-2 text-sm leading-5 text-text-secondary">
-          {taskContentSummary(task.content)}
+          {contentInfo.summary}
         </p>
+      ) : null}
+
+      {contentInfo.hasMermaid ? (
+        <div className="mt-2">
+          <Badge>Mermaid 도식</Badge>
+        </div>
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-surface-border-soft pt-3">
@@ -1146,7 +1256,7 @@ function TaskDetailDrawer({
                     ) : null}
                     {task.mmdContent.trim() ? (
                       <FieldPreview title="Mermaid" icon={<Activity className="size-4" />}>
-                        <CodeBlock value={task.mmdContent} empty="" />
+                        <MermaidFieldPreview value={task.mmdContent} />
                       </FieldPreview>
                     ) : null}
                   </div>
@@ -1323,6 +1433,18 @@ function CodeBlock({ value, empty }: { value: string; empty: string }) {
     <pre className="max-h-72 overflow-auto rounded-md border border-surface-border-soft bg-surface-muted p-3 text-xs leading-5 text-text-primary">
       <code>{value}</code>
     </pre>
+  );
+}
+
+function MermaidFieldPreview({ value }: { value: string }) {
+  const source = normalizeMermaidSource(value);
+  if (!source) {
+    return <p className="text-sm font-semibold text-text-muted">Mermaid 내용이 없습니다.</p>;
+  }
+  return (
+    <div className="overflow-hidden rounded-md border border-surface-border-soft bg-surface-raised">
+      <MermaidPreview block={{ id: `task-mermaid-${source.length}`, source }} index={0} />
+    </div>
   );
 }
 

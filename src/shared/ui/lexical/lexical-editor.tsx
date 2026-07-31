@@ -45,7 +45,7 @@ type SerializedLexicalNode = {
   children?: SerializedLexicalNode[]
 }
 
-type MermaidBlock = {
+export type MermaidBlock = {
   id: string
   source: string
 }
@@ -112,7 +112,7 @@ function extractMermaidBlocks(value?: string): MermaidBlock[] {
   }
 }
 
-function MermaidPreview({
+export function MermaidPreview({
   block,
   index,
 }: {
@@ -185,7 +185,7 @@ function MermaidPreview({
   )
 }
 
-function MermaidPreviewList({ blocks }: { blocks: MermaidBlock[] }) {
+export function MermaidPreviewList({ blocks }: { blocks: MermaidBlock[] }) {
   if (blocks.length === 0) return null
 
   return (
