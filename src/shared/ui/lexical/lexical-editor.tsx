@@ -114,9 +114,11 @@ function extractMermaidBlocks(value?: string): MermaidBlock[] {
 
 export function MermaidPreview({
   block,
+  frame = true,
   index,
 }: {
   block: MermaidBlock
+  frame?: boolean
   index: number
 }) {
   const [svg, setSvg] = useState<string | null>(null)
@@ -170,16 +172,28 @@ export function MermaidPreview({
   }, [block.source, index])
 
   if (error) {
-    return <div className="lexical-mermaid-preview lexical-mermaid-preview-error">{error}</div>
+    return (
+      <div
+        className={`lexical-mermaid-preview lexical-mermaid-preview-error${frame ? '' : ' lexical-mermaid-preview-flat'}`}
+      >
+        {error}
+      </div>
+    )
   }
 
   if (!svg) {
-    return <div className="lexical-mermaid-preview">다이어그램 렌더링 중...</div>
+    return (
+      <div
+        className={`lexical-mermaid-preview${frame ? '' : ' lexical-mermaid-preview-flat'}`}
+      >
+        다이어그램 렌더링 중...
+      </div>
+    )
   }
 
   return (
     <div
-      className="lexical-mermaid-preview"
+      className={`lexical-mermaid-preview${frame ? '' : ' lexical-mermaid-preview-flat'}`}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   )

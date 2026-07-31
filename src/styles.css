@@ -119,6 +119,13 @@
     @apply my-3 overflow-auto rounded-md border border-surface-border-soft bg-surface-muted p-4 text-sm text-text-primary;
   }
 
+  .lexical-mermaid-preview-flat {
+    margin: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
   .lexical-mermaid-preview svg {
     max-width: 100%;
     height: auto;

@@ -1442,9 +1442,11 @@ function MermaidFieldPreview({ value }: { value: string }) {
     return <p className="text-sm font-semibold text-text-muted">Mermaid 내용이 없습니다.</p>;
   }
   return (
-    <div className="overflow-hidden rounded-md border border-surface-border-soft bg-surface-raised">
-      <MermaidPreview block={{ id: `task-mermaid-${source.length}`, source }} index={0} />
-    </div>
+    <MermaidPreview
+      block={{ id: `task-mermaid-${source.length}`, source }}
+      frame={false}
+      index={0}
+    />
   );
 }
 
