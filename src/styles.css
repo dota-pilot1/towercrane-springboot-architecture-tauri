@@ -180,7 +180,8 @@
 }
 
 .project-schedule-calendar .fc .fc-col-header-cell {
-  background: var(--muted);
+  background: color-mix(in srgb, var(--border) 8%, var(--card));
+  border-bottom: 1px solid var(--fc-border-color);
 }
 
 .project-schedule-calendar .fc .fc-col-header-cell-cushion,

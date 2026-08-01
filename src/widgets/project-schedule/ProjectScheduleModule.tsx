@@ -420,10 +420,11 @@ function ProjectScheduleModule() {
         </Button>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 p-3">
+      <div className="flex min-h-0 flex-1 justify-center overflow-auto p-3">
+        <div className="flex h-full w-full max-w-[1440px]">
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-surface-border bg-surface-raised">
           <div className="shrink-0 border-b border-surface-border-soft px-4 py-2">
-            <div className="mx-auto flex min-h-12 w-full max-w-[980px] flex-wrap items-center gap-2">
+            <div className="mx-auto flex min-h-12 w-full max-w-[560px] flex-wrap items-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -460,8 +461,8 @@ function ProjectScheduleModule() {
             </div>
           </div>
 
-          <div className="project-schedule-calendar project-schedule-calendar-compact flex min-h-0 flex-1 justify-center p-3">
-            <div className="h-full w-full max-w-[980px]">
+          <div className="project-schedule-calendar project-schedule-calendar-compact flex min-h-0 flex-1 items-center justify-center overflow-auto p-3">
+            <div className="aspect-square w-full max-w-[560px]">
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, interactionPlugin]}
@@ -702,6 +703,7 @@ function ProjectScheduleModule() {
             </div>
           )}
         </aside>
+        </div>
       </div>
     </div>
   );
